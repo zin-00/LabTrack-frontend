@@ -35,6 +35,13 @@ const screenWidth = ref(window.innerWidth);
 const openDropdowns = ref([]);
 const route = useRoute();
 
+// Tooltip state
+const tooltipState = ref({
+  visible: false,
+  text: '',
+  top: 0
+});
+
 const defaultMenuItems = [
   {
     id: 'dashboard',
@@ -129,11 +136,19 @@ watch(sidebarState, (newState) => {
   if (newState === 'icon' || newState === 'closed') {
     openDropdowns.value = [];
   }
+  // Hide tooltip when sidebar state changes
+  tooltipState.value.visible = false;
 });
 
 // Methods
 const toggleSidebar = () => {
-  sidebarState.value = sidebarState.value === 'full' ? 'icon' : 'full';
+  if (sidebarState.value === 'closed') {
+    sidebarState.value = 'icon';
+  } else if (sidebarState.value === 'icon') {
+    sidebarState.value = 'full';
+  } else {
+    sidebarState.value = 'icon';
+  }
 };
 
 const closeSidebar = () => {
@@ -161,6 +176,22 @@ const isActiveParent = (children) => {
 
 const updateScreenWidth = () => {
   screenWidth.value = window.innerWidth;
+};
+
+// Tooltip methods
+const showTooltip = (event, label) => {
+  if (sidebarState.value !== 'icon') return;
+  
+  const rect = event.currentTarget.getBoundingClientRect();
+  tooltipState.value = {
+    visible: true,
+    text: label,
+    top: rect.top + rect.height / 2
+  };
+};
+
+const hideTooltip = () => {
+  tooltipState.value.visible = false;
 };
 
 // Lifecycle hooks
@@ -212,7 +243,7 @@ onUnmounted(() => {
     
     <!-- Sidebar -->
     <div 
-      class="fixed top-16 left-0 z-30 h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg overflow-y-auto"
+      class="fixed top-16 left-0 z-30 h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg overflow-y-auto overflow-x-visible"
       :class="{
         'w-60': sidebarState === 'full',
         'w-16': sidebarState === 'icon',
@@ -221,34 +252,41 @@ onUnmounted(() => {
         '-translate-x-full': sidebarState === 'closed'
       }"
     >
-      <div class="py-4">
+      <div class="py-4 h-full">
         <ul class="space-y-2 font-medium px-2">
-          <li v-for="item in menuItems" :key="item.id">
+          <li v-for="item in menuItems" :key="item.id" class="relative">
             <!-- Regular menu item -->
             <router-link 
               v-if="!item.children" 
               :to="item.to" 
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
-              :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveRoute(item.to) }"
+              @mouseenter="(e) => showTooltip(e, item.label)"
+              @mouseleave="hideTooltip"
+              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 relative"
+              :class="{
+                'bg-green-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveRoute(item.to),
+                'opacity-50 pointer-events-none': sidebarState === 'closed'
+              }"
             >
-              <component :is="item.icon" class="h-6 w-6 flex-shrink-0" />
+              <component :is="item.icon" class="h-5 w-5 flex-shrink-0" :class="{ 'text-green-700': isActiveRoute(item.to) }" />
               <span 
-                class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap"
+                class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap text-sm"
                 :class="{ 'opacity-0 w-0': sidebarState === 'icon', 'opacity-100': sidebarState === 'full' }"
               >
                 {{ item.label }}
               </span>
               <span 
                 v-if="isActiveRoute(item.to)" 
-                class="ml-auto w-2 h-2 bg-blue-500 rounded-full"
+                class="ml-auto w-2 h-2 bg-green-500 rounded-full"
                 :class="{ 'opacity-0': sidebarState === 'icon' }"
               />
             </router-link>
             
             <!-- Dropdown menu item -->
-            <div v-else>
+            <div v-else class="relative">
               <button 
                 @click="toggleDropdown(item.id)"
+                @mouseenter="(e) => showTooltip(e, item.label)"
+                @mouseleave="hideTooltip"
                 class="flex items-center w-full p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
                 :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveParent(item.children) }"
               >
@@ -278,7 +316,7 @@ onUnmounted(() => {
                 :class="{ 'max-h-0': !openDropdowns.includes(item.id), 'max-h-96': openDropdowns.includes(item.id) }"
               >
                 <ul class="pl-6 mt-2 space-y-1">
-                  <li v-for="child in item.children" :key="child.id">
+                  <li v-for="child in item.children" :key="child.id" class="relative">
                     <router-link 
                       :to="child.to"
                       class="flex items-center p-2 text-gray-600 rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
@@ -299,9 +337,22 @@ onUnmounted(() => {
         </ul>
       </div>
     </div>
+    
+    <!-- External Tooltip - positioned outside sidebar container -->
+    <Teleport to="body">
+      <div
+        v-if="tooltipState.visible && sidebarState === 'icon'"
+        class="fixed left-20 z-[9999] pointer-events-none transition-opacity duration-200"
+        :style="{ top: tooltipState.top - 16 + 'px' }"
+      >
+        <div class="px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded-lg shadow-lg whitespace-nowrap">
+          {{ tooltipState.text }}
+          <div class="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45"></div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
-
 
 <style scoped>
 /* Custom scrollbar for sidebar */

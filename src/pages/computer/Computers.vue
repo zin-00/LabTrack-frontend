@@ -5,10 +5,11 @@ import { useToast } from 'vue-toastification';
 import { EllipsisVerticalIcon } from '@heroicons/vue/16/solid';
 import TextInput from '../../components/input/TextInput.vue';
 import Modal from '../../components/modal/Modal.vue';
-import { useComputerStore} from '../../composable/useFuncion';
+import { useComputerStore} from '../../composable/computers';
+import { useRouter } from 'vue-router';
 
 const toast = useToast();
-
+const route = useRouter();
 // Stores
 const func = useComputerStore();
 
@@ -21,6 +22,7 @@ const rfidInputRef = ref(null);
 const newComputer = reactive({
   computer_number: '',
   ip_address: '',
+  mac_address: '',
   laboratory_id: 1,
   status: 'active'
 });
@@ -33,7 +35,6 @@ const selectedStatus = ref('all');
 const showDropdown = ref(null);
 const isSubmitting = ref(false);
 
-// Success/error flags for RFID form (add as needed)
 const hasError = ref(false);
 const errorMessage = ref('');
 const isSuccess = ref(false);
@@ -48,25 +49,6 @@ const filteredComputers = computed(() => {
     return labMatch && statusMatch;
   });
 });
-
-// Methods
-const loadComputers = async () => {
-  try {
-    await func.fetchComputers();
-  } catch (error) {
-    toast.error('Failed to fetch computers.');
-    console.error(error);
-  }
-};
-
-const loadLabs = async () => {
-  try {
-    await func.fetchLabs();
-  } catch (error) {
-    toast.error('Failed to fetch laboratories.');
-    console.error(error);
-  }
-};
 
 const openModal = (computer) => {
   selectedComputer.value = computer;
@@ -105,7 +87,7 @@ const saveComputer = async () => {
     } else {
       await func.storeComputer(newComputer);
     }
-    await loadComputers();
+     func.fetchComputers();
     showComputerModal.value = false;
   } catch (error) {
     toast.error('Failed to save computer.');
@@ -118,6 +100,7 @@ const editComputer = (computer) => {
   Object.assign(newComputer, {
     computer_number: computer.computer_number?.toString() ?? '',
     ip_address: computer.ip_address ?? '',
+    mac_address: computer.mac_address ?? '',
     laboratory_id: computer.laboratory_id ?? func.labs?.[0]?.id ?? 1,
     status: computer.status ?? 'active'
   });
@@ -127,7 +110,7 @@ const editComputer = (computer) => {
 const deleteComputer_func = async (id) => {
   try {
     await func.deleteComputer(id);
-    await loadComputers();
+    func.fetchComputers();
   } catch (error) {
     toast.error('Failed to delete computer.');
     console.error(error);
@@ -169,11 +152,37 @@ const unlockComputer = async () => {
   }
 };
 
+  const listenToComputerEvents = () => {
+
+    if(!window.echo){
+      toast.error('Echo is not initialized!');
+      console.error('Echo is not initialized!');
+      return;
+    }
+    window.echo.channel('computers')
+      .listen('.ComputerStatsEvent', (e) => {
+
+        const updateComputer = event;
+
+        const index = computers.value.findIndex(computer => computer.id === updateComputer.id);
+        if (index !== -1) {
+            func.computers.value[index].is_online = updateComputer.is_online;
+            func.computers.value[index].is_lock = updateComputer.is_lock;
+        }else{
+         func.computers.value.push(updateComputer);
+        }
+        toast.info(`Computer (${updatedComputer.ip_address}) is now ${updatedComputer.is_online ? 'online' : 'offline'}`);
+      });
+  }
+
 // Lifecycle
 onMounted(() => {
-  loadComputers();
-  loadLabs();
+  func.fetchComputers();
+  func.fetchLabs();
+  listenToComputerEvents();
+
 });
+
 
 watch(showModal, async (newVal) => {
   if (newVal) {
@@ -187,7 +196,7 @@ watch(showModal, async (newVal) => {
 
 <template>
   <AuthenticatedLayout>
-    <div class="p-4">
+    <div class="py-4 max-w-7xl mx-auto sm:px-4 bg-white">
       <h2 class="text-lg font-semibold mb-6">Computer Management</h2>
 
       <!-- Filters + Add -->
@@ -227,15 +236,9 @@ watch(showModal, async (newVal) => {
         <div class="w-full sm:w-auto">
           <button
             @click="openAddComputerModal"
-            class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm"
+            class="w-full sm:w-auto px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-blue-700 transition flex items-center justify-center gap-2 text-sm"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
-                d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
+           
             <span>Add Computer</span>
           </button>
         </div>
@@ -244,91 +247,74 @@ watch(showModal, async (newVal) => {
       <!-- Divider -->
       <hr class="border-gray-200 mb-6" />
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-      <div
-        v-for="computer in filteredComputers"
-        :key="computer.id"
-        class="group relative rounded-lg border border-gray-200 bg-white p-4 cursor-pointer transition-all hover:shadow-sm hover:border-blue-300"
-      >
-        <!-- Status dot with Online/Offline Label -->
-        <div class="absolute top-2 left-2 flex items-center">
-          <div
-            class="w-3 h-3 rounded-full mr-2"
-            :class="{
-              'bg-green-500': computer.is_online,
-              'bg-red-500': !computer.is_online
-            }"
-          ></div>
-          <span class="text-xs font-medium text-gray-600">
-            {{ computer.is_online ? 'Online' : 'Offline' }}
-          </span>
-        </div>
-
-        <!-- Menu -->
-        <div class="absolute top-2 right-2">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+        <div
+          v-for="computer in filteredComputers"
+          :key="computer.id"
+          class="relative border rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow"
+          :class="computer.is_online ? 'border-gray-800 bg-white' : 'border-gray-400 bg-gray-50'"
+          @click="openModal(computer)"
+        >
+          <!-- Menu -->
           <button
             @click.stop="toggleDropdown(computer.id)"
-            class="p-1 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            class="absolute top-2 right-2 p-1 hover:bg-gray-100 rounded"
           >
-            <EllipsisVerticalIcon class="h-4 w-4" />
+            <EllipsisVerticalIcon class="h-3 w-3 text-gray-600" />
           </button>
 
           <div
             v-if="showDropdown === computer.id"
-            class="absolute right-0 mt-2 w-36 bg-white rounded-md shadow-lg z-10 border border-gray-200 py-1 text-sm"
+            class="absolute right-0 top-8 w-24 bg-white rounded-md shadow-lg border border-gray-200 z-10 py-1 text-xs"
           >
-            <button
-              @click.stop="editComputer(computer)"
-              class="block w-full text-left px-3 py-1.5 hover:bg-gray-50"
-            >
+            <button @click.stop="editComputer(computer)" class="block w-full text-left px-2 py-1 hover:bg-gray-100">
               Edit
             </button>
-            <button
-              @click.stop="deleteComputer_func(computer.id)"
-              class="block w-full text-left px-3 py-1.5 text-red-600 hover:bg-red-50"
-            >
+            <button @click.stop="deleteComputer_func(computer.id)" class="block w-full text-left px-2 py-1 text-gray-900 hover:bg-gray-100">
               Delete
             </button>
           </div>
-        </div>
 
-        <!-- Computer Info -->
-        <div @click="openModal(computer)">
-          <h2 class="text-base font-semibold mt-2 text-gray-900">
-            PC {{ computer.computer_number }}
-          </h2>
-          <p class="text-xs text-gray-500 mt-1">IP: {{ computer.ip_address }}</p>
-          <p class="text-xs text-gray-500 mt-1">
-            Lab: {{ func.labs?.find(l => l.id === computer.laboratory_id)?.name || 'Unknown' }}
-          </p>
-          
-          <p class="mt-2">
-            <span
-              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-              :class="{
-                'bg-green-50 text-green-700 border border-green-200': computer.status === 'active',
-                'bg-red-50 text-red-700 border border-red-200': computer.status === 'inactive',
-                'bg-yellow-50 text-yellow-700 border border-yellow-200': computer.status === 'maintenance'
-              }"
-            >
-              {{ computer.status }}
-            </span>
-          </p>
-
-           <p class="mt-2">
-            <span
-              class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
-              :class="{
-                'bg-green-50 text-green-700 border border-green-200': computer.is_lock,
-                'bg-red-50 text-red-700 border border-red-200': !computer.is_lock,
-              }"
-            >
-              {{ computer.is_lock ? 'Locked' : 'Unlocked' }}
-            </span>
-          </p>
+          <!-- Content -->
+          <div class="pr-6">
+            <div class="flex items-center mb-2">
+              <div 
+                class="w-2 h-2 rounded-full mr-2 border"
+                :class="computer.is_online ? 'bg-green-500 border-black' : 'bg-red-500 border-gray-400'"
+              ></div>
+              <span class="text-sm font-medium text-gray-900">PC {{ computer.computer_number }}</span>
+            </div>
+            
+            <div class="text-xs text-gray-600 space-y-1">
+              <div>{{ computer.ip_address }}</div>
+              <div>{{ computer.mac_address || 'No MAC' }}</div>
+              <div>{{ func.labs?.find(l => l.id === computer.laboratory_id)?.name || 'Unknown' }}</div>
+            </div>
+            
+            <div class="flex gap-1 mt-2">
+              <span
+                class="px-2 py-0.5 rounded-full text-xs border capitalize"
+                :class="{
+                  'bg-green-500 text-white': computer.status === 'active',
+                  'bg-red-500 text-white ': computer.status === 'inactive',
+                  'bg-orange-500 text-white ': computer.status === 'maintenance'
+                }"
+              >
+                {{ computer.status }}
+              </span>
+              
+              <span
+                class="px-2 py-0.5 rounded-full text-xs border"
+                :class="computer.is_lock 
+                  ? 'bg-green-500 text-white ' 
+                  : 'bg-red-500 text-white '"
+              >
+                {{ computer.is_lock ? 'Lock' : 'Unlock' }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
       <!-- Unlock Modal -->
       <Modal :show="showModal" @close="closeModal" :closeable="!isSubmitting">
@@ -474,6 +460,15 @@ watch(showModal, async (newVal) => {
               <label class="block text-sm font-medium text-gray-700 mb-1">IP Address</label>
               <input
                 v-model="newComputer.ip_address"
+                type="text"
+                class="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+              >
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">MAC Address</label>
+              <input
+                v-model="newComputer.mac_address"
                 type="text"
                 class="w-full px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
               >

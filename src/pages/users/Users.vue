@@ -18,7 +18,9 @@ import { useToast } from 'vue-toastification';
 import { watch } from 'vue';
 import Modal from '../../components/modal/Modal.vue';
 import TextInput from '../../components/input/TextInput.vue';
-import { useStudentStore, useProgramStore, useExcelStore} from '../../composable/useFuncion';
+import {useExcelStore} from '../../composable/excel';
+import { useStudentStore } from '../../composable/student';
+import { useProgramStore } from '../../composable/program';
 
 const toast = useToast();
 
@@ -41,12 +43,8 @@ const showAdvancedFilters = ref(false);
 
 // Modal state
 const modalState = ref(false);
-const isImportModalOpen = ref(false);
 const isConfirmationModalOpen = ref(false);
 
-// Drag and Drop
-const isDragOver = ref(false);
-const selectedFile = ref(null);
 
 const selectedUser = ref(null);
 
@@ -73,6 +71,7 @@ const positions = ref([
 const studentData = reactive({
         student_id: '',
         first_name: '',
+        middle_name: '',
         last_name: '',
         email: '',
         rfid_uid: '',
@@ -152,6 +151,7 @@ const saveStudent = () => {
 const clearForm = () => {
     studentData.student_id = '';
     studentData.first_name = '';
+    studentData.middle_name = '';
     studentData.last_name = '';
     studentData.email = '';
     studentData.rfid_uid = '';
@@ -167,6 +167,7 @@ const editStudent = (student) => {
   Object.assign(studentData, {
     student_id: student.student_id?.toString() ?? '',
     first_name: student.first_name ?? '',
+    middle_name: student.middle_name ?? '',
     last_name: student.last_name ?? '',
     email: student.email ?? '',
     rfid_uid: student.rfid_uid?.toString() ?? '',
@@ -179,6 +180,7 @@ const openAddModal = () => {
     Object.assign(studentData, {
         student_id: '',
         first_name: '',
+        middle_name: '',
         last_name: '',
         email: '',
         rfid_uid: '',
@@ -215,7 +217,7 @@ onMounted(() => {
 
 <template>
     <AuthenticatedLayout>
-        <div class="py-4 max-w-7xl mx-auto sm:px-4">
+        <div class="py-4 max-w-7xl mx-auto sm:px-4 bg-white">
                 <h2 class="text-lg font-semibold mb-3">User Management</h2>
                 
             <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -276,15 +278,6 @@ onMounted(() => {
                         <option value="3rd">3rd Year</option>
                         <option value="4th">4th Year</option>
                     </select>
-
-                    <!-- Advanced Filters Toggle -->
-                    <button
-                        @click="showAdvancedFilters = !showAdvancedFilters"
-                        class="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 border border-blue-500 rounded-md hover:bg-blue-50 transition"
-                        >
-                        <FunnelIcon class="w-4 h-4" />
-                        {{ showAdvancedFilters ? 'Hide' : 'Advanced' }} Filters
-                    </button>
                 </div>
 
                 <!-- Right: Action Buttons -->
@@ -292,7 +285,7 @@ onMounted(() => {
                     <button
                         title="Refresh"
                         @click="refreshData"
-                        class="p-2 text-gray-600 hover:text-blue-600 hover:bg-gray-100 rounded-md transition duration-200"
+                        class="p-2 text-white  bg-gray-800 hover:bg-gray-700  rounded-md transition duration-200"
                         >
                         <ArrowPathIcon class="h-5 w-5" />
                     </button>
@@ -300,7 +293,7 @@ onMounted(() => {
                     <button
                         @click="openAddModal"
                         title="Add User"
-                        class="p-2 text-gray-600 hover:text-green-600 hover:bg-gray-100 rounded-md transition duration-200"
+                        class="p-2  text-white  bg-gray-800 hover:bg-gray-700 rounded-md transition duration-200"
                         >
                         <UserPlusIcon class="h-5 w-5" />
                     </button>
@@ -308,80 +301,14 @@ onMounted(() => {
                     <button
                         @click="xl.isImportModalOpen = true"
                         title="Import Users"
-                        class="p-2 text-gray-600 hover:text-purple-600 hover:bg-gray-100 rounded-md transition duration-200"
+                        class="p-2  text-white  bg-gray-800 hover:bg-gray-700 rounded-md transition duration-200"
                         >
                         <ArrowDownTrayIcon class="h-5 w-5" />
                     </button>
                 </div>
                 </div>
 
-                
-                <!-- Advanced filters section -->
-                <div v-if="showAdvancedFilters" class="mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Position</label>
-                            <select v-model="positionFilter" class="w-full border rounded p-2 text-sm">
-                                <option value="">All Positions</option>
-                                <option v-for="position in positions" :key="position.id" :value="position.id">
-                                    {{ position.name }}
-                                </option>
-                            </select>
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Country</label>
-                            <select v-model="countryFilter" class="w-full border rounded p-2 text-sm">
-                                <option value="">All Countries</option>
-                                <option v-for="country in countries" :key="country" :value="country">
-                                    {{ country }}
-                                </option>
-                            </select>
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">City</label>
-                            <select 
-                                v-model="cityFilter" 
-                                class="w-full border rounded p-2 text-sm"
-                                :disabled="!countryFilter"
-                            >
-                                <option value="">All Cities</option>
-                                <option v-for="city in cities" :key="city" :value="city">
-                                    {{ city }}
-                                </option>
-                            </select>
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Joined From</label>
-                            <input 
-                                v-model="dateRangeStart" 
-                                type="date" 
-                                class="w-full border rounded p-2 text-sm"
-                            >
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <label class="block text-sm font-medium text-gray-700">Joined To</label>
-                            <input 
-                                v-model="dateRangeEnd" 
-                                type="date" 
-                                class="w-full border rounded p-2 text-sm"
-                            >
-                        </div>
-                        
-                        <div class="flex items-end">
-                            <button 
-                                @click="resetFilters" 
-                                class="px-3 py-2 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-100"
-                            >
-                                Clear All Filters
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
+               
                 <!-- User Table-->
                 <div class="mt-4">
                     <Table 

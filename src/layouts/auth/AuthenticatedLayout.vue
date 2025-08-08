@@ -2,8 +2,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { UserIcon, HomeIcon, ChartAreaIcon } from 'lucide-vue-next';
-import { ClipboardDocumentCheckIcon, ClipboardDocumentListIcon, ComputerDesktopIcon } from '@heroicons/vue/24/outline';
-import { MdSharpSpaceDashboard } from '@kalimahapps/vue-icons';
+import { HomeModernIcon, FolderMinusIcon, ComputerDesktopIcon, AdjustmentsHorizontalIcon} from '@heroicons/vue/24/outline';
+import { AkDashboard, MdSharpSpaceDashboard } from '@kalimahapps/vue-icons';
 import { useUserStore } from '../../composable/useAuth';
 import SideBar from '../../components/sidebar/SideBar.vue';
 
@@ -19,12 +19,13 @@ const handleSidebarChange = (state) => {
 };
 
 const SideItems = ref([
-  { id: 'dashboard',        label: 'Dashboard',         icon: MdSharpSpaceDashboard, to: '/dashboard', class: 'h-2 w-2' },
+  { id: 'dashboard',        label: 'Dashboard',         icon: AkDashboard, to: '/dashboard'},
   { id: 'users',            label: 'Users',             icon: UserIcon, to: '/users' },
   { id: 'computers',        label: 'Computers',         icon: ComputerDesktopIcon, to: '/computers' },
+  { id: 'laboratory',       label: 'Laboratory',        icon: HomeModernIcon, to: '/laboratory' },
   { id: 'reports',          label: 'Reports',           icon: ChartAreaIcon, to: '/reports' },
-  { id: 'computer_logs',    label: 'Computer Logs',     icon: ClipboardDocumentListIcon, to: '/computer_logs'},
-  { id: 'settings',         label: 'Settings',          icon: UserIcon }
+  { id: 'computer_logs',    label: 'Computer Logs',     icon: FolderMinusIcon, to: '/computer_logs'},
+  { id: 'settings',         label: 'Settings',          icon: AdjustmentsHorizontalIcon }
 ]);
 
 const logout_func = async () => {
@@ -74,9 +75,6 @@ onUnmounted(() => {
                                     <span class="ms-2 text-xl font-semibold text-gray-900">LabTrack</span>
                                 </router-link>
                             </div>
-
-                            <!-- Navigation Links -->
-                            <!-- <NavigationLink :links="NavItems" /> -->
                         </div>
 
                         <div class="hidden sm:ms-6 sm:flex sm:items-center">

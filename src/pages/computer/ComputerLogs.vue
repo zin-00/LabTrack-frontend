@@ -4,7 +4,7 @@ import AuthenticatedLayout from '../../layouts/auth/AuthenticatedLayout.vue';
 import Table from '../../components/table/Table.vue';
 import { useToast } from 'vue-toastification';
 import * as XLSX from 'xlsx';
-import { useComputerLogStore } from '../../composable/useFuncion';
+import { useComputerLogStore } from '../../composable/computerLog';
 import { DocumentArrowDownIcon, ExclamationCircleIcon} from '@heroicons/vue/24/outline';
 
 const toast = useToast();
@@ -45,6 +45,11 @@ const fetchLogs = async (page =1) => {
 }
 
 const EventListener = () => {
+    if (!window.Echo) {
+    console.error('Echo is not initialized!');
+    return;
+  }
+  
   window.Echo.channel('computers')
     .listen('ComputerUnlocked', (e) => {
       toast.success('Computer unlocked by ' + (e.user?.name || 'Unknown'));
@@ -81,7 +86,7 @@ const exportToExcel = () => {
 
 <template>
   <AuthenticatedLayout>
-    <div class="py-4 max-w-7xl mx-auto sm:px-4">
+    <div class="py-4 max-w-7xl mx-auto sm:px-4 bg-white">
       <h2 class="text-lg font-semibold mb-3">Activity Log</h2>
 
       <!-- Filters -->
@@ -115,22 +120,23 @@ const exportToExcel = () => {
         </div>
 
         <!-- Export Button -->
-         <div class="w-full sm:w-auto flex gap-3">
+         <div class="w-full sm:w-auto flex gap-2">
           <button
             title="Incident Report"
             @click="exportToExcel"
-            class="py-2 text-white rounded-md text-sm cursor-pointer"
+            class="p-2 text-white  bg-gray-800 hover:bg-gray-700  rounded-md transition duration-200 text-xs"
           >
-            <ExclamationCircleIcon class="w-5 h-5 text-black" />
+            <!-- <ExclamationCircleIcon class="w-4 h-4 text-white" /> -->
+             Incident Report
           </button>
-        </div>
-         <div class="w-full sm:w-auto flex gap-3">
+
           <button
             title="Export to Excel"
             @click="exportToExcel"
-            class="py-2 text-white rounded-md cursor-pointer text-sm"
+            class="p-2 text-white  bg-gray-800 hover:bg-gray-700  rounded-md transition duration-200 text-xs"
           >
-           <DocumentArrowDownIcon class="w-5 h-5 text-black" />
+           <!-- <DocumentArrowDownIcon class="w-4 h-4 text-white" /> -->
+            Export to Excel
           </button>
         </div>
       </div>

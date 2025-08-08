@@ -1,18 +1,10 @@
 import {defineStore} from 'pinia'
 import { ref } from 'vue'
-import { useApiUrl } from './useApi';
+// import { useApiUrl } from './useApi';
 import axios from 'axios'
+import { useApiUrl } from '../api/api';
 
-const authApi = useApiUrl();
-const api = 'http://127.0.0.1:8000/api';
-const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  };
-};
+const {api, getAuthHeader} = useApiUrl();
 
 export const useUserStore = defineStore('user', () => {
     const user = ref(null);
@@ -34,8 +26,7 @@ export const useUserStore = defineStore('user', () => {
 
      const destroy = async () => {
         try {
-          const { api, getAuthHeader } = useApiUrl();
-          await axios.delete(api('/auth/logout'), getAuthHeader());
+          await axios.delete(`${api}/auth/logout`, getAuthHeader());
 
           clearUser();
           useStoreToken().clearToken();

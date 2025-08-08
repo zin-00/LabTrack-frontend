@@ -71,7 +71,6 @@ const headerLabels = {
   last_name: 'Last Name',
   email: 'Email',
   program: 'Program',
-  status: 'Status'
 }
 
 const formatProgram = (program) => {
@@ -112,7 +111,7 @@ const changePage = (page) => {
       <thead v-if="!slots.header" class="bg-gray-50 text-xs uppercase text-gray-500">
         <tr>
           <th
-            v-for="field in ['id','first_name','last_name','email','program','status']"
+            v-for="field in ['id','first_name','last_name','email','program']"
             :key="field"
             scope="col"
             class="px-4 py-2 font-medium text-left cursor-pointer select-none hover:bg-gray-100"
@@ -172,11 +171,11 @@ const changePage = (page) => {
               <span v-else>—</span>
             </td>
             <td class="px-4 py-2 text-gray-900">{{ formatProgram(user.program?.program_code) }}</td>
-            <td class="px-4 py-2">
+            <!-- <td class="px-4 py-2">
               <span :class="getStatusBadge(user.status)">
                 {{ user.status || 'Unknown' }}
               </span>
-            </td>
+            </td> -->
             <td class="px-4 py-2 text-gray-500">
               <div class="flex items-center gap-1.5">
                 <button @click="handleView(user)" class="p-1 hover:text-blue-600 hover:bg-gray-100 rounded">
