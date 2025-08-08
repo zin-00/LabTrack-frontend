@@ -14,6 +14,7 @@ import { useComputerStore } from '../../composable/computers';
 const router = useRouter();
 const labStore = useLaboratoryStore();
 const cstore = useComputerStore();
+const toast = useToast();
 
 
 const {laboratories,
@@ -121,7 +122,7 @@ const editlab = (laboratory) => {
     currentLabId.value = labId;
     populateModal.value = true;
     selectedComputers.value = [];
-    fetchNoLabComputers();
+    loadUnassignedComputers();
   };
 
   const toggleComputerSelection = (computerId) => {
@@ -137,18 +138,20 @@ const editlab = (laboratory) => {
 
     unassignedComputers.value = computers.value.filter(computer => !computer.laboratory_id);
   };
-  const assignComputers = async () => {
+const assignComputers = async () => {
   try {
     if (selectedComputers.value.length === 0) {
       toast.error('Please select at least one computer');
       return;
     }
 
-    assignLabToComputer(slectedComputers.value, currentLabId.value);
-
-    toast.success(`${selectedComputers.value.length} computer(s) assigned successfully`);
-    selectedComputers.value = [];
-    populateModal.value = false;
+    const success = await assignLabToComputer(selectedComputers.value, currentLabId.value);
+    
+    if (success) {
+      toast.success(`${selectedComputers.value.length} computer(s) assigned successfully`);
+      selectedComputers.value = [];
+      populateModal.value = false;
+    }
   } catch (error) {
     toast.error('Failed to assign computers');
     console.error(error);

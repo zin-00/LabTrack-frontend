@@ -72,9 +72,9 @@ const { api, getAuthHeader } = useApiUrl();
     }
   };
 
-  const assignLabToComputer = async (computerId, labId) => {
+  const assignLabToComputer = async (computerIds, labId) => {
     try {
-        const response = await axios.post(`${api}/assign-laboratories`, {computerId: computerId, laboratory_id: labId }, getAuthHeader());
+        const response = await axios.post(`${api}/assign-laboratories`, {computer_ids: computerIds, laboratory_id: labId }, getAuthHeader());
         toast.success(response.data.message || 'Lab assigned to computer successfully!');
         
     } catch (error) {
