@@ -76,6 +76,7 @@ const { api, getAuthHeader } = useApiUrl();
     try {
         const response = await axios.post(`${api}/assign-laboratories`, {computer_ids: computerIds, laboratory_id: labId }, getAuthHeader());
         toast.success(response.data.message || 'Lab assigned to computer successfully!');
+        fetchNoLabComputers();
         
     } catch (error) {
       toast.error('Failed to assign lab to computer.');

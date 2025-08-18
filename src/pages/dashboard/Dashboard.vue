@@ -1,36 +1,98 @@
 <script setup>
 import StatCard from '../../components/card/StatCard.vue';
 import AuthenticatedLayout from '../../layouts/auth/AuthenticatedLayout.vue';
-import { ref, computed, onMounted} from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useStatusDistributionStore } from '../../composable/statistics';
+import { storeToRefs } from 'pinia';
+import { useToast } from 'vue-toastification';
+import Table from '../../components/table/Table.vue';
 
+const toast = useToast();
 const func = useStatusDistributionStore();
+const { fetchStatusDistribution, fetchDataDistribution } = func;
+
+const { 
+  onlineCount,
+  offlineCount,
+  lockedCount,
+  unlockedCount,
+  totalCount,
+  activeCount,
+  inactiveCount,
+  maintenanceCount,
+  usageLab,
+  computerCount,
+  studentCount,
+  activeComputerCount,
+  inactiveComputerCount,
+  maintenanceComputerCount,
+  latestLogs
+} = storeToRefs(func);
 
 // Reactive data
 const searchQuery = ref('');
 const selectedPeriod = ref('week');
 const selectedCampaignFilter = ref('all');
+const isLoading = ref(true);
 
-const lineChartSeries = [
+// Toast helper
+function showError(error) {
+  toast.error(`Failed to fetch data: ${error}`);
+}
+
+const loadDataDistribution = async () => {
+  isLoading.value = true;
+  try {
+    await fetchDataDistribution(selectedPeriod.value);
+  } catch (error) {
+    console.error(error);
+    showError(error.message || 'Unknown error');
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+watch(selectedPeriod, () => {
+  loadDataDistribution();
+});
+
+const radialSeries = computed(() => [
+  activeCount.value || 0,
+  inactiveCount.value || 0,
+  maintenanceCount.value || 0
+]);
+
+const lineChartSeries = computed(() => [
+  { name: "Active Units", data: activeComputerCount.value || [] },
+  { name: "Inactive Units", data: inactiveComputerCount.value || [] },
+  { name: "Maintenance Units", data: maintenanceComputerCount.value || [] },
   {
-    name: "Active Units",
-    data: [20, 40, 35, 50, 49, 60, 70, 91, 125]
-  },
-  {
-    name: "Inactive Units", 
-    data: [10, 30, 25, 40, 39, 50, 60, 81, 115]
-  },
-    {
-        name: "Maintenance Units",
-        data: [5, 15, 10, 20, 19, 30, 40, 61, 95]
-    },
-    {
-        name: "Units Used",
-        data: [35, 85, 70, 110, 107, 140, 170, 233, 335]
+    name: "Units Used",
+    data: (activeComputerCount.value || []).map((val, i) =>
+      val + (inactiveComputerCount.value[i] || 0) + (maintenanceComputerCount.value[i] || 0)
+    )
+  }
+]);
+
+const lineChartCategories = computed(() => {
+  if (selectedPeriod.value === 'month') {
+    return ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  } else if (selectedPeriod.value === 'week') {
+    const days = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      days.push(d.toLocaleDateString('en-US', { weekday: 'short' }));
     }
-]
+    return days;
+  } else if (selectedPeriod.value === 'day' || selectedPeriod.value === 'today') {
+    return ['Today'];
+  }
+  return [];
+});
 
-const lineChartOptions = {
+const lineChartOptions = computed(() => ({
   chart: { 
     toolbar: { show: false },
     dropShadow: {
@@ -42,7 +104,7 @@ const lineChartOptions = {
     }
   },
   xaxis: {
-    categories: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    categories: lineChartCategories.value,
     labels: { 
       style: { colors: '#6B7280', fontSize: '12px' }
     }
@@ -69,18 +131,18 @@ const lineChartOptions = {
     theme: 'light',
     y: {
       formatter: function (val) {
-        return val + "K"
+        return val;
       }
     }
   }
-}
+}));
 
 const barChartSeries = [
   { 
     name: 'Earnings',
     data: [40, 52, 38, 60, 47, 59, 70] 
   }
-]
+];
 
 const barChartOptions = {
   chart: { 
@@ -97,7 +159,7 @@ const barChartOptions = {
     labels: { 
       style: { colors: '#6B7280', fontSize: '11px' },
       formatter: function (val) {
-        return '$' + val + 'K'
+        return '$' + val + 'K';
       }
     }
   },
@@ -121,11 +183,11 @@ const barChartOptions = {
     theme: 'light',
     y: {
       formatter: function (val) {
-        return '$' + val + 'K'
+        return '$' + val + 'K';
       }
     }
   }
-}
+};
 
 const radialOptions = {
   chart: {
@@ -182,256 +244,271 @@ const radialOptions = {
     markers: { width: 8, height: 8 }
   }
 };
-
-
-// Sample data for latest campaigns
-const latestCampaigns = ref([
-  {
-    id: 1,
-    name: 'Kathryn Murphy',
-    avatar: 'https://i.pravatar.cc/40?img=1',
-    date: '15 August 2023',
-    budget: '$5K',
-    status: 'Active',
-    location: 'Singapore',
-    performance: '+12.5%',
-    trend: 'up'
-  },
-  {
-    id: 2,
-    name: 'Floyd Miles',
-    avatar: 'https://i.pravatar.cc/40?img=2',
-    date: '15 August 2023', 
-    budget: '$20K',
-    status: 'Paused',
-    location: 'Singapore',
-    performance: '-2.1%',
-    trend: 'down'
-  },
-  {
-    id: 3,
-    name: 'Jerome Bell',
-    avatar: 'https://i.pravatar.cc/40?img=3',
-    date: '14 August 2023',
-    budget: '$8.5K',
-    status: 'Active',
-    location: 'Malaysia',
-    performance: '+8.3%',
-    trend: 'up'
-  },
-  {
-    id: 4,
-    name: 'Brooklyn Simmons',
-    avatar: 'https://i.pravatar.cc/40?img=4',
-    date: '14 August 2023',
-    budget: '$15K',
-    status: 'Completed',
-    location: 'Thailand',
-    performance: '+25.7%',
-    trend: 'up'
-  }
-])
-
-// Quick stats data
-const quickStats = ref([
-  { title: 'Total Computers', value: '$13,446,500', change: '+4.3%', icon: '💰' },
-  { title: 'Conversion Rate', value: '3.64%', change: '+0.8%', icon: '📈' },
-  { title: 'Active Campaigns', value: '24', change: '+2', icon: '🎯' },
-  { title: 'Total Reach', value: '2.4M', change: '+12.5%', icon: '👥' }
-])
-
-// Computed properties
-const filteredCampaigns = computed(() => {
-  if (selectedCampaignFilter.value === 'all') return latestCampaigns.value
-  return latestCampaigns.value.filter(campaign => 
-    campaign.status.toLowerCase() === selectedCampaignFilter.value
-  )
-})
-
-// Methods
-const getStatusColor = (status) => {
-  const colors = {
-    'Active': 'bg-green-100 text-green-800',
-    'Paused': 'bg-yellow-100 text-yellow-800', 
-    'Completed': 'bg-blue-100 text-blue-800',
-    'Draft': 'bg-gray-100 text-gray-800'
-  }
-  return colors[status] || 'bg-gray-100 text-gray-800'
-}
-
-const getTrendIcon = (trend) => {
-  return trend === 'up' ? '📈' : '📉'
-}
-
 const setPeriod = (period) => {
-  selectedPeriod.value = period
-}
+  selectedPeriod.value = period;
+};
 
 const setCampaignFilter = (filter) => {
-  selectedCampaignFilter.value = filter
+  selectedCampaignFilter.value = filter;
+};
+
+const getFullName = (log) => {
+  if (log.student?.first_name || log.student?.last_name) {
+    return `${log.student.first_name || ''} ${log.student.last_name || ''}`.trim()
+  }
+  return log.student_id || 'N/A'
 }
 
-const total = computed(() => func.activeCount + func.inactiveCount + func.maintenanceCount || 1);
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  })
+}
 
-const active = computed(() =>
-  parseFloat(((func.activeCount || 0) / total.value * 100).toFixed(2))
-);
-const inactive = computed(() =>
-  parseFloat(((func.inactiveCount || 0) / total.value * 100).toFixed(2))
-);
-const maintenance = computed(() =>
-  parseFloat(((func.maintenanceCount || 0) / total.value * 100).toFixed(2))
-);
+const formatTime = (dateString) => {
+  if (!dateString) return ''
+  return new Date(dateString).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  })
+}
 
-
-
-
-
-onMounted(() => {
-  func.fetchStatusDistribution();
-  console.log(func.activeCount, func.inactiveCount, func.maintenanceCount, total.value);
-
+onMounted(async () => {
+  try {
+    await fetchStatusDistribution();
+    await loadDataDistribution();
+  } catch (error) {
+    console.error('Error loading data:', error);
+    showError(error.message || 'Unknown error');
+  } finally {
+    isLoading.value = false;
+  }
 });
 </script>
 
+
 <template>
   <AuthenticatedLayout>
-    <div class="min-h-screen bg-gray-50 p-6">
+    <div class="py-4 max-w-7xl mx-auto sm:px-4 bg-white">
       <!-- Enhanced Header -->
-      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-        <div>
-          <h1 class="text-xs font-bold text-gray-900">Campaign Dashboard</h1>
-          <p class="text-gray-600 mt-1">Monitor and manage your marketing campaigns</p>
+          <div>
+          <h2 class="text-2xl font-bold text-gray-900">Overview</h2>
+          <p class="mt-1 text-sm text-gray-600"> Track computer activity, usage statistics, and system events in real time.</p>
         </div>
-       
-      </div>
 
       <!-- Main Grid Section -->
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <!-- Left Side - Takes 3 columns -->
         <div class="xl:col-span-3 space-y-6">
           <!-- Enhanced Stat Cards -->
-        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div class="flex items-center justify-between mb-6">
-                <h2 class="text-lg font-semibold text-gray-900">System Node Status</h2>
-                <span class="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium cursor-pointer"><router-link to="/computer_logs">View Logs</router-link></span>
+              <h2 class="text-lg font-semibold text-gray-900">System Node Status</h2>
+              <span class="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium cursor-pointer">
+                <router-link to="/computer_logs">View Logs</router-link>
+              </span>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <StatCard title="Online Nodes" :value="func.onlineCount" change="+1.26%" />
-                <StatCard title="Offline Nodes" :value="func.offlineCount" change="-1.56%" />
-                <StatCard title="Active Sessions" :value="func.activeCount" change="+3.26%" />
-                <StatCard title="Total Units" :value="func.totalCount" change="+3.25%" />
+              <StatCard title="Online Nodes" :value="onlineCount" change="+1.26%" />
+              <StatCard title="Offline Nodes" :value="offlineCount" change="-1.56%" />
+              <StatCard title="Active Sessions" :value="activeCount" change="+3.26%" />
+              <StatCard title="Total Units" :value="totalCount" change="+3.25%" />
             </div>
-        </div>
+          </div>
 
           <!-- Enhanced Line Chart -->
           <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-lg font-semibold text-gray-900">Campaign Statistics</h3>
+              <!-- Period filter buttons -->
               <div class="flex gap-2">
-                
-                <button 
-                  @click="setPeriod('month')"
-                  :class="selectedPeriod === 'month' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200'"
-                  class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors">
-                  Month
-                </button>
-                <button 
-                  @click="setPeriod('week')"
-                  :class="selectedPeriod === 'week' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200'"
-                  class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors">
-                  Week
-                </button>
-                <button 
-                  @click="setPeriod('day')"
-                  :class="selectedPeriod === 'day' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200'"
-                  class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors">
-                  Day
-                </button>
+                  <button 
+                    @click="setPeriod('month')"
+                    :class="selectedPeriod === 'month' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors"
+                  >
+                    Month
+                  </button>
+                  <button 
+                    @click="setPeriod('week')"
+                    :class="selectedPeriod === 'week' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors"
+                  >
+                    Week
+                  </button>
+                  <button 
+                    @click="setPeriod('day')"
+                    :class="selectedPeriod === 'day' ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-gray-50 text-gray-600 border-gray-200'"
+                    class="px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors"
+                  >
+                    Day
+                  </button>
               </div>
+
             </div>
             <apexchart
+              v-if="!isLoading"
               height="320"
               type="area"
               :options="lineChartOptions"
               :series="lineChartSeries"
             />
+            <div v-else class="h-80 flex items-center justify-center">
+              <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
           </div>
 
-          <!-- Latest Campaigns Table -->
+          <!-- Latest Logs Table -->
           <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div class="flex items-center justify-between mb-6">
-              <h3 class="text-lg font-semibold text-gray-900">Latest Campaigns</h3>
-              <div class="flex gap-2">
-                <select 
-                  v-model="selectedCampaignFilter"
-                  class="text-xs px-3 py-1.5 border border-gray-200 rounded-lg bg-gray-50 text-gray-600">
-                  <option value="all">All Campaigns</option>
-                  <option value="active">Active</option>
-                  <option value="paused">Paused</option>
-                  <option value="completed">Completed</option>
-                </select>
-                <span class="text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg font-medium">View All</span>
-              </div>
+              <h3 class="text-lg font-semibold text-gray-900">Latest Logs</h3>
+                                            <span class="text-xs bg-orange-100 text-orange-700 px-3 py-1.5 rounded-lg font-medium">View All</span>
+
             </div>
-            <div class="space-y-3">
-              <div v-for="campaign in filteredCampaigns" :key="campaign.id"
-                   class="flex items-center justify-between p-4 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors">
-                <div class="flex items-center space-x-4">
-                  <img :src="campaign.avatar" :alt="campaign.name" class="w-10 h-10 rounded-full">
-                  <div>
-                    <h4 class="font-medium text-gray-900">{{ campaign.name }}</h4>
-                    <p class="text-sm text-gray-500">{{ campaign.date }}</p>
-                  </div>
-                </div>
-                <div class="flex items-center space-x-6">
-                  <div class="text-right">
-                    <p class="font-semibold text-gray-900">{{ campaign.budget }}</p>
-                    <p class="text-sm text-gray-500">{{ campaign.location }}</p>
-                  </div>
-                  <span :class="getStatusColor(campaign.status)" 
-                        class="px-2 py-1 text-xs font-medium rounded-full">
-                    {{ campaign.status }}
-                  </span>
-                  <div class="flex items-center space-x-1">
-                    <span class="text-sm font-medium" 
-                          :class="campaign.trend === 'up' ? 'text-green-600' : 'text-red-600'">
-                      {{ campaign.performance }}
+          <div class="space-y-3">
+            <Table>
+              <template #header>
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-3 py-2 text-xs font-medium text-gray-600 text-left">
+                      Student ID
+                    </th>
+                    <th class="px-3 py-2 text-xs font-medium text-gray-600 text-left">
+                      Full Name
+                    </th>
+                    <th class="px-3 py-2 text-xs font-medium text-gray-600 text-left hidden sm:table-cell">
+                      Laboratory
+                    </th>
+                    <th class="px-3 py-2 text-xs font-medium text-gray-600 text-left hidden md:table-cell">
+                      Computer
+                    </th>
+                    <th class="px-3 py-2 text-xs font-medium text-gray-600 text-left hidden lg:table-cell">
+                      IP Address
+                    </th>
+                    <th class="px-3 py-2 text-xs font-medium text-gray-600 text-left">
+                      Date & Time
+                    </th>
+                  </tr>
+                </thead>
+              </template>
+              
+              <template #default>
+                <tr 
+                  v-for="log in latestLogs" 
+                  :key="log.id"
+                  class="hover:bg-gray-50 transition-colors"
+                >
+                  <td class="px-3 py-3 text-sm font-medium text-gray-900">
+                    {{ log.student?.student_id || '—' }}
+                  </td>
+                  <td class="px-3 py-3 text-sm text-gray-900">
+                    <div class="max-w-xs truncate">
+                      {{ getFullName(log) }}
+                    </div>
+                  </td>
+                  <td class="px-3 py-3 text-sm text-gray-700 hidden sm:table-cell">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                      {{ log.computer?.laboratory?.name || 'N/A' }}
                     </span>
-                    <span class="text-lg">{{ getTrendIcon(campaign.trend) }}</span>
-                  </div>
-                  <button class="p-1 hover:bg-gray-200 rounded">
-                    <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"></path>
-                    </svg>
-                  </button>
+                  </td>
+                  <td class="px-3 py-3 text-sm text-gray-700 hidden md:table-cell">
+                    <span class="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                      PC-{{ log.computer?.computer_number || 'N/A' }}
+                    </span>
+                  </td>
+                  <td class="px-3 py-3 text-sm text-gray-700 hidden lg:table-cell">
+                    <code class="text-xs bg-gray-100 px-2 py-1 rounded">
+                      {{ log.ip_address || 'N/A' }}
+                    </code>
+                  </td>
+                  <td class="px-3 py-3 text-sm text-gray-700">
+                    <div class="text-xs">
+                      <div class="font-medium">{{ formatDate(log.created_at) }}</div>
+                      <div class="text-gray-500">{{ formatTime(log.created_at) }}</div>
+                    </div>
+                  </td>
+                </tr>
+                
+                <!-- Empty State -->
+                <tr v-if="!latestLogs || latestLogs.length === 0">
+                  <td colspan="6" class="px-3 py-8 text-center text-gray-500">
+                    <div class="flex flex-col items-center gap-2">
+                      <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                      </svg>
+                      <span class="text-sm">No logs found</span>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </Table>
+          </div>
+
+          <!-- Mobile Card View (Alternative for very small screens) -->
+          <div class="block sm:hidden space-y-3 mt-4">
+            <div 
+              v-for="log in latestLogs" 
+              :key="`mobile-${log.id}`"
+              class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
+            >
+              <div class="flex justify-between items-start mb-3">
+                <div>
+                  <h3 class="font-medium text-gray-900">{{ getFullName(log) }}</h3>
+                  <p class="text-sm text-gray-500">ID: {{ log.student?.student_id || '—' }}</p>
+                </div>
+                <div class="text-right">
+                  <div class="text-xs font-medium text-gray-900">{{ formatDate(log.created_at) }}</div>
+                  <div class="text-xs text-gray-500">{{ formatTime(log.created_at) }}</div>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span class="text-gray-500">Lab:</span>
+                  <span class="ml-1 text-gray-900">{{ log.computer?.laboratory?.name || 'N/A' }}</span>
+                </div>
+                <div>
+                  <span class="text-gray-500">PC:</span>
+                  <span class="ml-1 font-mono text-xs">{{ log.computer?.computer_number || 'N/A' }}</span>
+                </div>
+                <div class="col-span-2">
+                  <span class="text-gray-500">IP:</span>
+                  <code class="ml-1 text-xs bg-gray-100 px-2 py-1 rounded">{{ log.ip_address || 'N/A' }}</code>
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
 
         <!-- Right Side - Takes 1 column -->
         <div class="space-y-6">
-
           <!-- Enhanced Campaign Earning Radial -->
-         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div class="mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 mb-2">Node Activity</h3>
-                <p class="text-sm text-gray-600">Uptime distribution</p>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Node Activity</h3>
+              <p class="text-sm text-gray-600">Uptime distribution</p>
             </div>
             <apexchart
-                height="250"
-                type="radialBar"
-                :options="radialOptions"
-                :series="[active, inactive, maintenance]"
+              v-if="!isLoading"
+              height="250"
+              type="radialBar"
+              :options="radialOptions"
+              :series="radialSeries"
             />
-        </div>
+            <div v-else class="h-64 flex items-center justify-center">
+              <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          </div>
 
-         <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div class="mb-6">
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Weekly Earnings</h3>
-              <p class="text-3xl font-bold text-gray-900">$3,190,523</p>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">Weekly Usage</h3>
+              <p class="text-3xl font-bold text-gray-900">3,190,523</p>
               <p class="text-sm text-green-600 mt-1">+8.2% from last week</p>
             </div>
             <apexchart
@@ -440,39 +517,6 @@ onMounted(() => {
               :options="barChartOptions"
               :series="barChartSeries"
             />
-          </div>
-
-
-          <!-- Total Earning Summary -->
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Total Earning</h3>
-            <div class="mb-4">
-              <p class="text-2xl font-bold text-gray-900">$13,446,500</p>
-              <p class="text-sm text-green-600">+4.3% increase</p>
-            </div>
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <div class="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span class="text-sm text-gray-600">Bounce</span>
-                </div>
-                <span class="text-sm font-medium text-gray-900">45%</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <div class="w-3 h-3 bg-orange-500 rounded-full"></div>
-                  <span class="text-sm text-gray-600">Investment</span>
-                </div>
-                <span class="text-sm font-medium text-gray-900">30%</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <div class="w-3 h-3 bg-red-500 rounded-full"></div>
-                  <span class="text-sm text-gray-600">Saving</span>
-                </div>
-                <span class="text-sm font-medium text-gray-900">25%</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>

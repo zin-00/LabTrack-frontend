@@ -8,54 +8,13 @@ import { LoaderCircle } from 'lucide-vue-next';
 import { useToast } from 'vue-toastification';
 import TextInput from '../../components/input/TextInput.vue';
 import router from '../../router';
+import { useAuthStore } from '../../composable/useAuth';
+import { storeToRefs } from 'pinia';
 
-const form = reactive({
-  name: '',
-  email: '',
-  password: '',
-  password_confirmation: '',
-});
+const auth = useAuthStore();
 
-const toast = useToast();
-const processing = false;
-const isLoading = false;
-
-
-const register_func = async () => {
-
-  try {
-   const response = await axios.post('http://127.0.0.1:8000/api/auth/register', {
-      name: form.name,
-      email: form.email,
-      password: form.password,
-      password_confirmation: form.password_confirmation
-    });
-    
-    const data = response.data.message;
-
-    if(data){
-      toast.success('Registration successful! Please check your email to verify your account.');
-      clear_form();
-      router.push({ name: 'login' });
-    }
-
-  } catch (error) {
-    console.error('Registration failed:', error);
-    toast.error('Registration failed. Please try again.');
-    form.errors = error.response?.data?.errors || { general: 'Registration failed. Try again.' };
-  } finally {
-    form.isLoading = false;
-  }
-};
-
-const clear_form = () => {
-  form.name = '';
-  form.email = '';
-  form.password = '';
-  form.password_confirmation = '';
-  form.isLoading = false;
-  form.errors = null;
-};
+const { register, clear_form } = auth;
+const {form} = storeToRefs(auth);
 
 onMounted(() => {
   clear_form();
@@ -66,7 +25,7 @@ onMounted(() => {
     <AuthBase title="Create an account" description="Enter your details below to create your account">
         <Head title="Register" />
 
-        <form @submit.prevent="register_func" class="flex flex-col gap-6">
+        <form @submit.prevent="register" class="flex flex-col gap-6">
             <div class="grid gap-6">
                 <div class="grid gap-2">
                     <Label for="name">Name</Label>
@@ -109,7 +68,7 @@ onMounted(() => {
                       <InputError :message="Array.isArray(form.errors?.password) ? form.errors.password[0] : form.errors?.password" />
                 </div>
 
-                <Button type="submit" class="mt-2 w-full" tabindex="5" :disabled="form.processing">
+                <Button variant="dark" type="submit" class="mt-2 h-[50px] w-full" tabindex="5" :disabled="form.processing">
                     <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                     Create account
                 </Button>

@@ -17,10 +17,51 @@
     const activeCount = ref(0);
     const inactiveCount = ref(0);
     const maintenanceCount = ref(0);
+    const latestLogs = ref([]);
+
+    const computerCount = ref(0);
+    const studentCount = ref(0);
+    const activeComputerCount = ref([]);   
+    const inactiveComputerCount = ref([]); 
+    const maintenanceComputerCount = ref([]);
+
+
+    const fetchDataDistribution = async (period = 'month') => {
+        try {
+            const response = await axios.get(`${api}/data-distribution`, {
+            ...getAuthHeader(),
+            params: { period}
+            });
+
+            if (!response.data) throw new Error('Empty response data');
+
+            const data = response.data;
+
+            studentCount.value = data.registeredStudents || 0;
+            activeComputerCount.value = data.activeUnits || [];
+            inactiveComputerCount.value = data.inactiveUnits || [];
+            maintenanceComputerCount.value = data.maintenanceUnits || [];
+        } catch (error) {
+            console.error('Error details:', {
+            error: error.message,
+            response: error.response?.data,
+            status: error.response?.status,
+            headers: error.response?.headers
+            });
+            toast.error(`Failed to fetch data: ${error.message}`);
+
+            studentCount.value = 0;
+            activeComputerCount.value = [];
+            inactiveComputerCount.value = [];
+            maintenanceComputerCount.value = [];
+        }
+        };
+
+
 
     const fetchStatusDistribution = async () => {
       try {
-        const response = await axios.get(`${api}/computer/status-distribution`, getAuthHeader());
+        const response = await axios.get(`${api}/status-distribution`, getAuthHeader());
         const data = response.data;
 
         onlineCount.value = data.online_count || 0;
@@ -31,6 +72,8 @@
         activeCount.value = data.active_count || 0;
         inactiveCount.value = data.inactive_count || 0;
         maintenanceCount.value = data.maintenance_count || 0;
+        latestLogs.value = data.latest_logs || [];
+
 
 
       } catch (error) {
@@ -39,14 +82,21 @@
       }
     };
     return {
-      onlineCount,
-      offlineCount,
-      lockedCount,
-      unlockedCount,
-      totalCount,
-      activeCount,
-      inactiveCount,
-      maintenanceCount,
+        onlineCount,
+        offlineCount,
+        lockedCount,
+        unlockedCount,
+        totalCount,
+        activeCount,
+        inactiveCount,
+        maintenanceCount,
+        computerCount,
+        studentCount,
+        activeComputerCount,
+        inactiveComputerCount,
+        maintenanceComputerCount,
+        latestLogs,
       fetchStatusDistribution,
+      fetchDataDistribution,
     };
   });

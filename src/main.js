@@ -11,6 +11,7 @@ import { createPinia } from 'pinia'
 import VueApexCharts from 'vue3-apexcharts'
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
+import { useApiUrl } from './api/api'
 
 window.Pusher = Pusher;
 
@@ -18,18 +19,12 @@ window.echo = new Echo({
     broadcaster: 'reverb',
     key: 'zfw9iorec1mrb9z6pzeg', 
     wsHost: '127.0.0.1', 
+    // wsHost: '192.168.1.9',
     wsPort: 8080, 
     wssPort: 8080,
     forceTLS: false, 
     enabledTransports: ['ws', 'wss'],
     disableStats: true,
-
-    auth: {
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`, // If using auth
-        },
-    },
-    authEndpoint: 'http://localhost:8000/broadcasting/auth', // Your Laravel API URL
 });
 
 

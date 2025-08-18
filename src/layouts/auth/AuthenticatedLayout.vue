@@ -1,13 +1,21 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { UserIcon, HomeIcon, ChartAreaIcon } from 'lucide-vue-next';
-import { HomeModernIcon, FolderMinusIcon, ComputerDesktopIcon, AdjustmentsHorizontalIcon} from '@heroicons/vue/24/outline';
-import { AkDashboard, MdSharpSpaceDashboard } from '@kalimahapps/vue-icons';
-import { useUserStore } from '../../composable/useAuth';
+import { UserIcon, HomeIcon, ChartAreaIcon} from 'lucide-vue-next';
+import { 
+        HomeModernIcon,
+        FolderMinusIcon,
+        ComputerDesktopIcon,
+        AdjustmentsHorizontalIcon,
+        UsersIcon,
+        EnvelopeIcon,
+        AcademicCapIcon
+        } from '@heroicons/vue/24/outline';
+import { AkDashboard,LaUserTieSolid } from '@kalimahapps/vue-icons';
+import { useAuthStore } from '../../composable/useAuth';
 import SideBar from '../../components/sidebar/SideBar.vue';
 
-const auth = useUserStore();
+const auth = useAuthStore();
 const router = useRouter();
 const showingNavigationDropdown = ref(false);
 const showingSettingsDropdown = ref(false);
@@ -20,18 +28,30 @@ const handleSidebarChange = (state) => {
 
 const SideItems = ref([
   { id: 'dashboard',        label: 'Dashboard',         icon: AkDashboard, to: '/dashboard'},
-  { id: 'users',            label: 'Users',             icon: UserIcon, to: '/users' },
+  { id: 'users',            label: 'Users',  icon: UsersIcon, to: '/users' , children: [
+    {
+        id: 'students',     label: 'Students', icon: AcademicCapIcon, to: '/students'
+    },
+    {
+        id: 'admin',        label: 'Admin', icon: LaUserTieSolid, to: '/admin'
+    }
+  ]},
   { id: 'computers',        label: 'Computers',         icon: ComputerDesktopIcon, to: '/computers' },
   { id: 'laboratory',       label: 'Laboratory',        icon: HomeModernIcon, to: '/laboratory' },
-  { id: 'reports',          label: 'Reports',           icon: ChartAreaIcon, to: '/reports' },
-  { id: 'computer_logs',    label: 'Computer Logs',     icon: FolderMinusIcon, to: '/computer_logs'},
-  { id: 'settings',         label: 'Settings',          icon: AdjustmentsHorizontalIcon }
+//   { id: 'reports',          label: 'Reports',           icon: ChartAreaIcon, to: '/reports' },
+  { id: 'computer_logs',    label: 'Logs',     icon: FolderMinusIcon, to: '/computer_logs'},
+  { id: 'request_access',   label: 'Request Access',    icon: EnvelopeIcon, to: '/request-access'}
+//   { id: 'settings',         label: 'Settings',          icon: AdjustmentsHorizontalIcon }
 ]);
 
 const logout_func = async () => {
-  await auth.destroy();
+  await auth.logout();
   router.push('/login');
 };
+
+// const profile_func = async () => {
+//     router.push('/profile');
+// }
 
 const closeDropdowns = () => {
   showingSettingsDropdown.value = false;
@@ -69,7 +89,7 @@ onUnmounted(() => {
                     <div class="flex h-16 justify-between">
                         <div class="flex">
                             <!-- Logo -->
-                            <div class="flex shrink-0 items-center">
+                            <div class="flex items-center">
                                 <router-link to="/dashboard" class="flex items-center">
                                     <img src="@/assets/sfxclogo.png" alt="" srcset="" class="h-8 w-8" />
                                     <span class="ms-2 text-xl font-semibold text-gray-900">LabTrack</span>
@@ -118,13 +138,15 @@ onUnmounted(() => {
                                             class="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
                                         >
                                             <!-- Profile Link -->
-                                            <router-link
-                                                to="/profile"
-                                                @click="closeDropdowns"
-                                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out"
-                                            >
-                                                Profile
-                                            </router-link>
+                                            <button>
+                                                <router-link
+                                                    to="/profile"
+                                                    @click="closeDropdowns"
+                                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out"
+                                                >
+                                                    Profile
+                                                </router-link>
+                                            </button>
                                             
                                             <!-- Logout Button -->
                                             <button
@@ -195,14 +217,14 @@ onUnmounted(() => {
                         >
                             Dashboard
                         </router-link>
-                        <router-link
+                        <!-- <router-link
                             to="/employees"
                             @click="showingNavigationDropdown = false"
                             class="block py-2 pe-4 ps-3 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 focus:bg-gray-50 focus:text-gray-700 transition duration-150 ease-in-out"
                             active-class="bg-indigo-50 border-indigo-400 text-indigo-700 focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700"
                         >
                             Employees
-                        </router-link>
+                        </router-link> -->
                     </div>
 
                     <!-- Responsive Settings Options -->

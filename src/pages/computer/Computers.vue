@@ -24,8 +24,12 @@ const newComputer = reactive({
   ip_address: '',
   mac_address: '',
   laboratory_id: 1,
-  status: 'active'
+  status: 'active',
+  // is_unlock: true,
+  // is_online: false,
 });
+
+let currentChannel = null;
 
 const showModal = ref(false);
 const showComputerModal = ref(false);
@@ -151,29 +155,34 @@ const unlockComputer = async () => {
     isSubmitting.value = false;
   }
 };
-
-  const listenToComputerEvents = () => {
-
+const listenToComputerEvents = () => {
     if(!window.echo){
-      toast.error('Echo is not initialized!');
-      console.error('Echo is not initialized!');
-      return;
+        toast.error('Echo is not initialized!');
+        console.error('Echo is not initialized!');
+        return;
     }
-    window.echo.channel('computers')
-      .listen('.ComputerStatsEvent', (e) => {
-
-        const updateComputer = event;
-
-        const index = computers.value.findIndex(computer => computer.id === updateComputer.id);
-        if (index !== -1) {
-            func.computers.value[index].is_online = updateComputer.is_online;
-            func.computers.value[index].is_lock = updateComputer.is_lock;
-        }else{
-         func.computers.value.push(updateComputer);
+    
+    // Listen to all computer status updates
+    window.echo.channel(`computer-status`)
+    .listen('.ComputerStatusUpdated', (e) => {
+        if (!e.computer) {
+            toast.error('No computer data in event:', e);
+            return;
         }
+        toast.success('Event received: Computer status updated');
+        const updatedComputer = e.computer;
+        const index = func.computers.findIndex(c => c.id === updatedComputer.id);
+        
+        if (index !== -1) {
+            // Update the computer in the store
+            func.computers[index] = { ...func.computers[index], ...updatedComputer };
+        } else {
+            func.computers.push(updatedComputer);
+        }
+        
         toast.info(`Computer (${updatedComputer.ip_address}) is now ${updatedComputer.is_online ? 'online' : 'offline'}`);
-      });
-  }
+    });
+}
 
 // Lifecycle
 onMounted(() => {
@@ -181,6 +190,51 @@ onMounted(() => {
   func.fetchLabs();
   listenToComputerEvents();
 
+    if (window.echo && window.echo.connector && window.echo.connector.socket) {
+    const socket = window.echo.connector.socket;
+
+    socket.on('connect', () => {
+      console.log('Connected to Reverb websocket server');
+      toast.success('Connected to Reverb websocket server');
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Disconnected from Reverb websocket server');
+      toast.error('Disconnected from Reverb websocket server');
+    });
+
+    socket.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      toast.error('WebSocket error: ' + error.message);
+    });
+  }
+
+});
+
+watch(selectedComputer, (newComputer, oldComputer) => {
+  if(currentChannel && oldComputer){
+      currentChannel.unsubscribe();
+  }
+  if(newComputer && newComputer.ip_address){
+      currentChannel = window.echo.channel(`computer-status.${newComputer.ip_address}`);  // use public channel here
+
+      currentChannel.listen('.ComputerStatusUpdated', (event) => {
+          if (!event.computer) {
+              toast.error('No computer data in event:', event);
+              return;
+          }
+          toast.success('Event received: Computer status updated');
+          const updatedComputer = event.computer;
+          const index = func.computers.findIndex(c => c.id === updatedComputer.id);
+          
+          if(index !== -1) {
+              func.computers[index] = { ...func.computers[index], ...updatedComputer };
+          } else {
+              func.computers.push(updatedComputer);
+          }
+          toast.info(`Computer (${updatedComputer.ip_address}) is now ${updatedComputer.is_online ? 'online' : 'offline'}`);
+      });
+  }
 });
 
 
@@ -197,10 +251,13 @@ watch(showModal, async (newVal) => {
 <template>
   <AuthenticatedLayout>
     <div class="py-4 max-w-7xl mx-auto sm:px-4 bg-white">
-      <h2 class="text-lg font-semibold mb-6">Computer Management</h2>
+     <div>
+        <h2 class="text-2xl font-bold text-gray-900">Computer Management</h2>
+         <p class="mt-1 text-sm text-gray-600">Manage computers, unlock remotely, and perform CRUD.</p>
+      </div>
 
       <!-- Filters + Add -->
-      <div class="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-end mb-6">
+      <div class="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-end mb-6 mt-5">
         <!-- Filters -->
         <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-end flex-1">
           <!-- Lab -->

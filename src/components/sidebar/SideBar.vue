@@ -1,6 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { 
   UsersIcon, 
   HomeIcon,
@@ -16,7 +16,10 @@ import {
   CogIcon,
   UserIcon,
   BuildingOfficeIcon,
-  ClockIcon
+  ClockIcon,
+  ArrowRightOnRectangleIcon,
+  ShieldCheckIcon,
+  BellIcon
 } from '@heroicons/vue/24/outline';
 
 // Props for customization
@@ -27,13 +30,14 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['sidebarStateChange']);
+const emit = defineEmits(['sidebarStateChange', 'logout']);
 
 // Reactive state
 const sidebarState = ref(localStorage.getItem('sidebarState') || 'full');
 const screenWidth = ref(window.innerWidth);
 const openDropdowns = ref([]);
 const route = useRoute();
+const router = useRouter();
 
 // Tooltip state
 const tooltipState = ref({
@@ -104,7 +108,10 @@ const defaultMenuItems = [
         to: '/reports/monthly'
       }
     ]
-  },
+  }
+];
+
+const settingsMenuItems = [
   {
     id: 'settings',
     label: 'Settings',
@@ -114,13 +121,25 @@ const defaultMenuItems = [
         id: 'profile',
         label: 'Profile',
         icon: UserIcon,
-        to: '/settings/profile'
+        to: '/profile'
       },
       {
         id: 'company',
         label: 'Company',
         icon: BuildingOfficeIcon,
         to: '/settings/company'
+      },
+      {
+        id: 'notifications',
+        label: 'Notifications',
+        icon: BellIcon,
+        to: '/settings/notifications'
+      },
+      {
+        id: 'security',
+        label: 'Security',
+        icon: ShieldCheckIcon,
+        to: '/settings/security'
       }
     ]
   }
@@ -166,8 +185,28 @@ const toggleDropdown = (itemId) => {
   }
 };
 
+const handleLogout = async () => {
+  try {
+    // Emit logout event to parent component
+    emit('logout');
+    
+    // Optional: Clear local storage
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userSession');
+    
+    // Navigate to login page
+    router.push('/login');
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
+};
+
 const isActiveRoute = (routePath) => {
   return route.path === routePath;
+};
+
+const isActiveChild = (childPath) => {
+  return route.path === childPath || route.path.startsWith(childPath);
 };
 
 const isActiveParent = (children) => {
@@ -203,7 +242,8 @@ onMounted(() => {
   }
   
   // Auto-open dropdown if current route is a child
-  menuItems.value.forEach(item => {
+  const allItems = [...menuItems.value, ...settingsMenuItems];
+  allItems.forEach(item => {
     if (item.children && isActiveParent(item.children)) {
       if (!openDropdowns.value.includes(item.id)) {
         openDropdowns.value.push(item.id);
@@ -243,7 +283,7 @@ onUnmounted(() => {
     
     <!-- Sidebar -->
     <div 
-      class="fixed top-16 left-0 z-30 h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg overflow-y-auto overflow-x-visible"
+      class="fixed top-16 left-0 z-30 h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg overflow-y-auto overflow-x-visible flex flex-col"
       :class="{
         'w-60': sidebarState === 'full',
         'w-16': sidebarState === 'icon',
@@ -252,7 +292,8 @@ onUnmounted(() => {
         '-translate-x-full': sidebarState === 'closed'
       }"
     >
-      <div class="py-4 h-full">
+      <!-- Main Menu Items -->
+      <div class="py-4 flex-1">
         <ul class="space-y-2 font-medium px-2">
           <li v-for="item in menuItems" :key="item.id" class="relative">
             <!-- Regular menu item -->
@@ -287,7 +328,7 @@ onUnmounted(() => {
                 @click="toggleDropdown(item.id)"
                 @mouseenter="(e) => showTooltip(e, item.label)"
                 @mouseleave="hideTooltip"
-                class="flex items-center w-full p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
+                class="flex items-center w-full p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
                 :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveParent(item.children) }"
               >
                 <component :is="item.icon" class="h-6 w-6 flex-shrink-0" />
@@ -304,7 +345,7 @@ onUnmounted(() => {
                 />
                 <span 
                   v-if="isActiveParent(item.children)" 
-                  class="ml-auto w-2 h-2 bg-blue-500 rounded-full"
+                  class="ml-auto w-2 h-2 bg-green-500 rounded-full"
                   :class="{ 'opacity-0': sidebarState === 'icon' }"
                 />
               </button>
@@ -319,20 +360,98 @@ onUnmounted(() => {
                   <li v-for="child in item.children" :key="child.id" class="relative">
                     <router-link 
                       :to="child.to"
-                      class="flex items-center p-2 text-gray-600 rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
-                      :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveRoute(child.to) }"
+                      class="flex items-center p-2 text-gray-600 rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-xs"
+                      :class="{ ' bg-green-100 text-blue-700 dark:text-blue-200': isActiveRoute(child.to) }"
                     >
                       <component :is="child.icon" class="h-5 w-5 flex-shrink-0" />
                       <span class="ms-3">{{ child.label }}</span>
                       <span 
                         v-if="isActiveRoute(child.to)" 
-                        class="ml-auto w-2 h-2 bg-blue-500 rounded-full"
+                        class="ml-auto w-2 h-2 bg-green-500 rounded-full"
                       />
                     </router-link>
                   </li>
                 </ul>
               </div>
             </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Settings Section (Bottom) -->
+      <div class="border-t border-gray-200 dark:border-gray-700 py-4">
+        <ul class="space-y-2 font-medium px-2">
+          <li v-for="item in settingsMenuItems" :key="item.id" class="relative">
+            <!-- Settings dropdown menu item -->
+            <div class="relative">
+              <button 
+                @click="toggleDropdown(item.id)"
+                @mouseenter="(e) => showTooltip(e, item.label)"
+                @mouseleave="hideTooltip"
+                class="flex items-center w-full p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
+                :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveParent(item.children) }"
+              >
+                <component :is="item.icon" class="h-6 w-6 flex-shrink-0" />
+                <span 
+                  class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap"
+                  :class="{ 'opacity-0 w-0': sidebarState === 'icon', 'opacity-100': sidebarState === 'full' }"
+                >
+                  {{ item.label }}
+                </span>
+                <ChevronDownIcon 
+                  v-if="sidebarState === 'full'"
+                  class="ml-auto h-4 w-4 transition-transform duration-200"
+                  :class="{ 'rotate-180': openDropdowns.includes(item.id) }"
+                />
+                <span 
+                  v-if="isActiveParent(item.children)" 
+                  class="ml-auto w-2 h-2 bg-green-500 rounded-full"
+                  :class="{ 'opacity-0': sidebarState === 'icon' }"
+                />
+              </button>
+              
+              <!-- Settings dropdown items -->
+              <div 
+                v-if="sidebarState === 'full'"
+                class="overflow-hidden transition-all duration-300"
+                :class="{ 'max-h-0': !openDropdowns.includes(item.id), 'max-h-96': openDropdowns.includes(item.id) }"
+              >
+                <ul class="pl-6 mt-2 space-y-1">
+                  <li v-for="child in item.children" :key="child.id" class="relative">
+                    <router-link 
+                      :to="child.to"
+                      class="flex items-center p-2 text-gray-600 rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-xs"
+                      :class="{ ' bg-green-100 text-blue-700 dark:text-blue-200': isActiveRoute(child.to) }"
+                    >
+                      <component :is="child.icon" class="h-5 w-5 flex-shrink-0" />
+                      <span class="ms-3">{{ child.label }}</span>
+                      <span 
+                        v-if="isActiveRoute(child.to)" 
+                        class="ml-auto w-2 h-2 bg-green-500 rounded-full"
+                      />
+                    </router-link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </li>
+          
+          <!-- Logout Button -->
+          <li class="relative">
+            <button 
+              @click="handleLogout"
+              @mouseenter="(e) => showTooltip(e, 'Logout')"
+              @mouseleave="hideTooltip"
+              class="flex items-center w-full p-2 text-red-600 rounded-lg dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 text-sm"
+            >
+              <ArrowRightOnRectangleIcon class="h-6 w-6 flex-shrink-0" />
+              <span 
+                class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap"
+                :class="{ 'opacity-0 w-0': sidebarState === 'icon', 'opacity-100': sidebarState === 'full' }"
+              >
+                Logout
+              </span>
+            </button>
           </li>
         </ul>
       </div>

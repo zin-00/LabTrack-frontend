@@ -18,7 +18,7 @@
 <script setup>
 defineProps({
   title: String,
-  value: String,
+  value: [Number, String],
   change: String
 })
 </script>
