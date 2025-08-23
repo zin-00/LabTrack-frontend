@@ -295,17 +295,17 @@ onMounted(async () => {
   <AuthenticatedLayout>
     <div class="py-4 max-w-7xl mx-auto sm:px-4 bg-white">
       <!-- Enhanced Header -->
-          <div>
+          <!-- <div>
           <h2 class="text-2xl font-bold text-gray-900">Overview</h2>
           <p class="mt-1 text-sm text-gray-600"> Track computer activity, usage statistics, and system events in real time.</p>
-        </div>
+        </div> -->
 
       <!-- Main Grid Section -->
       <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
         <!-- Left Side - Takes 3 columns -->
         <div class="xl:col-span-3 space-y-6">
           <!-- Enhanced Stat Cards -->
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <div class="bg-white p-2 rounded-xl shadow-sm border border-gray-100">
             <div class="flex items-center justify-between mb-6">
               <h2 class="text-lg font-semibold text-gray-900">System Node Status</h2>
               <span class="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-medium cursor-pointer">
@@ -323,7 +323,7 @@ onMounted(async () => {
           <!-- Enhanced Line Chart -->
           <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div class="flex items-center justify-between mb-6">
-              <h3 class="text-lg font-semibold text-gray-900">Campaign Statistics</h3>
+              <h3 class="text-lg font-semibold text-gray-900">Node Activity</h3>
               <!-- Period filter buttons -->
               <div class="flex gap-2">
                   <button 
@@ -505,7 +505,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <!-- <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
             <div class="mb-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-2">Weekly Usage</h3>
               <p class="text-3xl font-bold text-gray-900">3,190,523</p>
@@ -517,7 +517,7 @@ onMounted(async () => {
               :options="barChartOptions"
               :series="barChartSeries"
             />
-          </div>
+          </div> -->
         </div>
       </div>
     </div>

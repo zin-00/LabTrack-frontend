@@ -56,7 +56,7 @@ const goToLaboratory = (lab) => {
 const filterLaboratories = computed(() => {
     return (laboratories.value || []).filter((lab) => {
         const matchesQuery = lab.name?.toLowerCase().includes(searchQuery.value.toLowerCase());
-        const matchesStatus = !statusFilter.value || lab.status === statusFilter.value;
+        const matchesStatus = statusFilter.value === 'all' || lab.status === statusFilter.value;
         return matchesQuery && matchesStatus;
     });
 });
@@ -219,10 +219,10 @@ onMounted(() => {
                                 v-model="statusFilter"
                                 class="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white transition-colors"
                             >
-                                <option value="">All Status</option>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Maintenance">Maintenance</option>
+                                <option value="all">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="maintenance">Maintenance</option>
                             </select>
                         </div>
 
@@ -415,7 +415,7 @@ onMounted(() => {
                         <div class="flex gap-3">
                             <Button
                                 @click="populateModal = false"
-                                class="px-4 py-2 text-sm bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                             >
                                 Cancel
                             </Button>

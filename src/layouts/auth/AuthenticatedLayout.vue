@@ -1,85 +1,3 @@
-<script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { UserIcon, HomeIcon, ChartAreaIcon} from 'lucide-vue-next';
-import { 
-        HomeModernIcon,
-        FolderMinusIcon,
-        ComputerDesktopIcon,
-        AdjustmentsHorizontalIcon,
-        UsersIcon,
-        EnvelopeIcon,
-        AcademicCapIcon
-        } from '@heroicons/vue/24/outline';
-import { AkDashboard,LaUserTieSolid } from '@kalimahapps/vue-icons';
-import { useAuthStore } from '../../composable/useAuth';
-import SideBar from '../../components/sidebar/SideBar.vue';
-
-const auth = useAuthStore();
-const router = useRouter();
-const showingNavigationDropdown = ref(false);
-const showingSettingsDropdown = ref(false);
-
-const sidebarState = ref('icon');
-
-const handleSidebarChange = (state) => {
-  sidebarState.value = state;
-};
-
-const SideItems = ref([
-  { id: 'dashboard',        label: 'Dashboard',         icon: AkDashboard, to: '/dashboard'},
-  { id: 'users',            label: 'Users',  icon: UsersIcon, to: '/users' , children: [
-    {
-        id: 'students',     label: 'Students', icon: AcademicCapIcon, to: '/students'
-    },
-    {
-        id: 'admin',        label: 'Admin', icon: LaUserTieSolid, to: '/admin'
-    }
-  ]},
-  { id: 'computers',        label: 'Computers',         icon: ComputerDesktopIcon, to: '/computers' },
-  { id: 'laboratory',       label: 'Laboratory',        icon: HomeModernIcon, to: '/laboratory' },
-//   { id: 'reports',          label: 'Reports',           icon: ChartAreaIcon, to: '/reports' },
-  { id: 'computer_logs',    label: 'Logs',     icon: FolderMinusIcon, to: '/computer_logs'},
-  { id: 'request_access',   label: 'Request Access',    icon: EnvelopeIcon, to: '/request-access'}
-//   { id: 'settings',         label: 'Settings',          icon: AdjustmentsHorizontalIcon }
-]);
-
-const logout_func = async () => {
-  await auth.logout();
-  router.push('/login');
-};
-
-// const profile_func = async () => {
-//     router.push('/profile');
-// }
-
-const closeDropdowns = () => {
-  showingSettingsDropdown.value = false;
-};
-
-const toggleSettingsDropdown = () => {
-  showingSettingsDropdown.value = !showingSettingsDropdown.value;
-};
-
-const handleClickOutside = (event) => {
-  if (!(event.target.closest('.dropdown-container'))) {
-    closeDropdowns();
-  }
-};
-
-onMounted( async () => {
-  document.addEventListener('click', handleClickOutside);
-  if(!auth.user){
-    await auth.loadUser()
-  }
-});
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-});
-</script>
-
-
 <template>
     <div>
         <div class="min-h-screen bg-gray-100">
@@ -91,8 +9,9 @@ onUnmounted(() => {
                             <!-- Logo -->
                             <div class="flex items-center">
                                 <router-link to="/dashboard" class="flex items-center">
-                                    <img src="@/assets/sfxclogo.png" alt="" srcset="" class="h-8 w-8" />
-                                    <span class="ms-2 text-xl font-semibold text-gray-900">LabTrack</span>
+                                    <img src="@/assets/sfxclogo.png" alt="" srcset="" class="h-8 w-8 sm:h-10 sm:w-10" />
+                                    <span class="ms-2 text-lg sm:text-xl font-semibold text-gray-900 hidden sm:block">LabTrack</span>
+                                    <span class="ms-2 text-sm font-semibold text-gray-900 sm:hidden">LT</span>
                                 </router-link>
                             </div>
                         </div>
@@ -108,7 +27,8 @@ onUnmounted(() => {
                                         type="button"
                                         class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
                                         >
-                                        {{ auth.user.name }}
+                                        <span class="hidden sm:inline">{{ auth.user.name }}</span>
+                                        <span class="sm:hidden">{{ auth.user.name.charAt(0) }}</span>
                                         <svg
                                             class="-me-0.5 ms-2 h-4 w-4 transition-transform duration-150"
                                             :class="{ 'rotate-180': showingSettingsDropdown }"
@@ -122,7 +42,7 @@ onUnmounted(() => {
                                             clip-rule="evenodd"
                                             />
                                         </svg>
-                                        </button>
+                                    </button>
 
                                     <!-- Dropdown Content -->
                                     <Transition
@@ -145,6 +65,17 @@ onUnmounted(() => {
                                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out"
                                                 >
                                                     Profile
+                                                </router-link>
+                                            </button>
+                                            
+                                            <!-- Settings Link -->
+                                            <button>
+                                                <router-link
+                                                    to="/settings"
+                                                    @click="closeDropdowns"
+                                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition duration-150 ease-in-out"
+                                                >
+                                                    Settings
                                                 </router-link>
                                             </button>
                                             
@@ -210,21 +141,15 @@ onUnmounted(() => {
                     <!-- Mobile Navigation Links -->
                     <div class="space-y-1 pb-3 pt-2">
                         <router-link
-                            to="/dashboard"
+                            v-for="item in SideItems"
+                            :key="item.id"
+                            :to="item.to"
                             @click="showingNavigationDropdown = false"
                             class="block py-2 pe-4 ps-3 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 focus:bg-gray-50 focus:text-gray-700 transition duration-150 ease-in-out"
                             active-class="bg-indigo-50 border-indigo-400 text-indigo-700 focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700"
                         >
-                            Dashboard
+                            {{ item.label }}
                         </router-link>
-                        <!-- <router-link
-                            to="/employees"
-                            @click="showingNavigationDropdown = false"
-                            class="block py-2 pe-4 ps-3 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 focus:bg-gray-50 focus:text-gray-700 transition duration-150 ease-in-out"
-                            active-class="bg-indigo-50 border-indigo-400 text-indigo-700 focus:text-indigo-800 focus:bg-indigo-100 focus:border-indigo-700"
-                        >
-                            Employees
-                        </router-link> -->
                     </div>
 
                     <!-- Responsive Settings Options -->
@@ -246,6 +171,13 @@ onUnmounted(() => {
                             >
                                 Profile
                             </router-link>
+                            <router-link
+                                to="/settings"
+                                @click="showingNavigationDropdown = false"
+                                class="block py-2 pe-4 ps-3 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 focus:bg-gray-50 focus:text-gray-700 transition duration-150 ease-in-out"
+                            >
+                                Settings
+                            </router-link>
                             <button
                                 @click="logout_func"
                                 class="block w-full text-left py-2 pe-4 ps-3 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 focus:bg-gray-50 focus:text-gray-700 transition duration-150 ease-in-out"
@@ -257,26 +189,152 @@ onUnmounted(() => {
                 </div>
             </nav>
 
-           <SideBar @sidebarStateChange="handleSidebarChange" :customMenuItems="SideItems" />
+           <SideBar 
+               @sidebarStateChange="handleSidebarChange" 
+               @logout="logout_func"
+               :customMenuItems="SideItems" 
+           />
 
-           <div class="transition-all duration-200 ease-in-out pt-16"
-                :class="{
-                    'lg:ml-64': sidebarState === 'full',
-                    'lg:ml-16': sidebarState === 'icon',
-                    'ml-0': sidebarState === 'closed'
-                }">
-
-            
+           <!-- Main Content Area with proper reactive classes -->
+           <div 
+               class="transition-all duration-300 ease-in-out pt-16 min-h-screen"
+               :class="mainContentClasses"
+           >
                 <header class="bg-white shadow" v-if="$slots.header">
                     <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                         <slot name="header" />
                     </div>
                 </header>
 
-                <main>
+                <main class="p-4">
                     <slot />
                 </main>
             </div>
         </div>
     </div>
 </template>
+
+<script setup>
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { UserIcon, HomeIcon, ChartAreaIcon} from 'lucide-vue-next';
+import { 
+        HomeModernIcon,
+        FolderMinusIcon,
+        ComputerDesktopIcon,
+        AdjustmentsHorizontalIcon,
+        UsersIcon,
+        EnvelopeIcon,
+        AcademicCapIcon
+        } from '@heroicons/vue/24/outline';
+import { AkDashboard,LaUserTieSolid } from '@kalimahapps/vue-icons';
+import { useAuthStore } from '../../composable/useAuth';
+import SideBar from '../../components/sidebar/SideBar.vue';
+
+const auth = useAuthStore();
+const router = useRouter();
+const showingNavigationDropdown = ref(false);
+const showingSettingsDropdown = ref(false);
+
+// Make sidebarState reactive and persistent
+const sidebarState = ref(localStorage.getItem('sidebarState') || 'full');
+
+// Watch for sidebar state changes and update localStorage
+watch(sidebarState, (newState) => {
+  localStorage.setItem('sidebarState', newState);
+}, { immediate: true });
+
+const handleSidebarChange = (state) => {
+  sidebarState.value = state;
+};
+
+// Computed property for main content classes - this ensures reactivity
+const mainContentClasses = computed(() => {
+  const classes = [];
+  
+  switch (sidebarState.value) {
+    case 'full':
+      classes.push('lg:ml-60'); // Adjusted to match sidebar width
+      break;
+    case 'icon':
+      classes.push('lg:ml-16');
+      break;
+    case 'closed':
+    default:
+      classes.push('ml-0');
+      break;
+  }
+  
+  return classes.join(' ');
+});
+
+const SideItems = ref([
+  { id: 'dashboard',        label: 'Dashboard',         icon: AkDashboard, to: '/dashboard'},
+  { id: 'users',            label: 'Users',  icon: UsersIcon, to: '/users' , children: [
+    {
+        id: 'students',     label: 'Students', icon: AcademicCapIcon, to: '/students'
+    },
+    {
+        id: 'admin',        label: 'Admin', icon: LaUserTieSolid, to: '/admin'
+    }
+  ]},
+  { id: 'computers',        label: 'Computers',         icon: ComputerDesktopIcon, to: '/computers' },
+  { id: 'laboratory',       label: 'Laboratory',        icon: HomeModernIcon, to: '/laboratory' },
+  { id: 'computer_logs',    label: 'Logs',     icon: FolderMinusIcon, to: '/computer_logs'},
+  { id: 'request_access',   label: 'Request Access',    icon: EnvelopeIcon, to: '/request-access'}
+]);
+
+const logout_func = async () => {
+  try {
+    await auth.logout();
+    // Clear sidebar state on logout
+    localStorage.removeItem('sidebarState');
+    router.push('/login');
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Still redirect even if logout fails
+    router.push('/login');
+  }
+};
+
+const closeDropdowns = () => {
+  showingSettingsDropdown.value = false;
+  showingNavigationDropdown.value = false;
+};
+
+const toggleSettingsDropdown = () => {
+  showingSettingsDropdown.value = !showingSettingsDropdown.value;
+};
+
+const handleClickOutside = (event) => {
+  if (!(event.target.closest('.dropdown-container'))) {
+    closeDropdowns();
+  }
+};
+
+// Handle window resize to adjust sidebar on mobile
+const handleResize = () => {
+  if (window.innerWidth < 1024 && sidebarState.value !== 'closed') {
+    sidebarState.value = 'closed';
+  }
+};
+
+onMounted( async () => {
+  document.addEventListener('click', handleClickOutside);
+  window.addEventListener('resize', handleResize);
+  
+  if(!auth.user){
+    await auth.loadUser()
+  }
+  
+  // Set initial sidebar state based on screen size
+  if (window.innerWidth < 1024) {
+    sidebarState.value = 'closed';
+  }
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+  window.removeEventListener('resize', handleResize);
+});
+</script>

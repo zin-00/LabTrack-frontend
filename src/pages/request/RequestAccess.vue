@@ -94,8 +94,8 @@ onMounted(() => {
          <div class="py-4 max-w-7xl mx-auto sm:px-4 bg-white">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
                     <div>
-                        <h2 class="text-2xl font-bold text-gray-900">Request Access Management</h2>
-                        <p class="mt-1 text-sm text-gray-600">Monitor computer usage and system events</p>
+                        <h2 class="text-2xl font-bold text-gray-900">Access Control Requests</h2>
+                        <p class="mt-1 text-sm text-gray-600">Oversee system login privileges and account request approvals.</p>
                     </div>
 
                                 <div class="flex flex-wrap items-center justify-between gap-3 mb-4">

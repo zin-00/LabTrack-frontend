@@ -9,7 +9,7 @@ const { api, getAuthHeader } = useApiUrl();
 
 export const useLaboratoryStore = defineStore('laboratory', () => {
   const laboratories = ref([]);
-  const statusFilter = ref('');
+  const statusFilter = ref('all');
   const isLoading = ref(false);
   const isModalOpen = ref(false);
   const isImportModalOpen = ref(false);

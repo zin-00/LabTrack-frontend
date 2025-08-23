@@ -1,268 +1,9 @@
-<script setup>
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { 
-  UsersIcon, 
-  HomeIcon,
-  ChartBarIcon, 
-  MapIcon, 
-  ClipboardDocumentCheckIcon, 
-  ChevronRightIcon, 
-  ChevronLeftIcon, 
-  ChevronDownIcon,
-  CalendarDaysIcon,
-  DocumentCheckIcon, 
-  ClipboardDocumentListIcon,
-  CogIcon,
-  UserIcon,
-  BuildingOfficeIcon,
-  ClockIcon,
-  ArrowRightOnRectangleIcon,
-  ShieldCheckIcon,
-  BellIcon
-} from '@heroicons/vue/24/outline';
-
-// Props for customization
-const props = defineProps({
-  customMenuItems: {
-    type: Array,
-    default: () => []
-  }
-});
-
-const emit = defineEmits(['sidebarStateChange', 'logout']);
-
-// Reactive state
-const sidebarState = ref(localStorage.getItem('sidebarState') || 'full');
-const screenWidth = ref(window.innerWidth);
-const openDropdowns = ref([]);
-const route = useRoute();
-const router = useRouter();
-
-// Tooltip state
-const tooltipState = ref({
-  visible: false,
-  text: '',
-  top: 0
-});
-
-const defaultMenuItems = [
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: HomeIcon,
-    to: '/dashboard'
-  },
-  {
-    id: 'employees',
-    label: 'Employees',
-    icon: UsersIcon,
-    to: '/employees'
-  },
-  {
-    id: 'attendance',
-    label: 'Attendance',
-    icon: ClipboardDocumentCheckIcon,
-    children: [
-      {
-        id: 'live-attendance',
-        label: 'Live Attendance',
-        icon: ClipboardDocumentListIcon,
-        to: '/attendance/view'
-      },
-      {
-        id: 'attendance-records',
-        label: 'Attendance Records',
-        icon: DocumentCheckIcon,
-        to: '/attendance-records'
-      },
-      {
-        id: 'attendance-history',
-        label: 'History',
-        icon: MapIcon,
-        to: '/attendance/history'
-      }
-    ]
-  },
-  {
-    id: 'schedules',
-    label: 'Schedule',
-    icon: CalendarDaysIcon,
-    to: '/schedules'
-  },
-  {
-    id: 'reports',
-    label: 'Reports',
-    icon: ChartBarIcon,
-    children: [
-      {
-        id: 'daily-reports',
-        label: 'Daily Reports',
-        icon: ClockIcon,
-        to: '/reports/daily'
-      },
-      {
-        id: 'monthly-reports',
-        label: 'Monthly Reports',
-        icon: CalendarDaysIcon,
-        to: '/reports/monthly'
-      }
-    ]
-  }
-];
-
-const settingsMenuItems = [
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: CogIcon,
-    children: [
-      {
-        id: 'profile',
-        label: 'Profile',
-        icon: UserIcon,
-        to: '/profile'
-      },
-      {
-        id: 'company',
-        label: 'Company',
-        icon: BuildingOfficeIcon,
-        to: '/settings/company'
-      },
-      {
-        id: 'notifications',
-        label: 'Notifications',
-        icon: BellIcon,
-        to: '/settings/notifications'
-      },
-      {
-        id: 'security',
-        label: 'Security',
-        icon: ShieldCheckIcon,
-        to: '/settings/security'
-      }
-    ]
-  }
-];
-
-const menuItems = computed(() => {
-  return props.customMenuItems.length > 0 ? props.customMenuItems : defaultMenuItems;
-});
-
-watch(sidebarState, (newState) => {
-  localStorage.setItem('sidebarState', newState);
-  emit('sidebarStateChange', newState);
-  if (newState === 'icon' || newState === 'closed') {
-    openDropdowns.value = [];
-  }
-  // Hide tooltip when sidebar state changes
-  tooltipState.value.visible = false;
-});
-
-// Methods
-const toggleSidebar = () => {
-  if (sidebarState.value === 'closed') {
-    sidebarState.value = 'icon';
-  } else if (sidebarState.value === 'icon') {
-    sidebarState.value = 'full';
-  } else {
-    sidebarState.value = 'icon';
-  }
-};
-
-const closeSidebar = () => {
-  sidebarState.value = 'closed';
-};
-
-const toggleDropdown = (itemId) => {
-  if (sidebarState.value !== 'full') return;
-  
-  const index = openDropdowns.value.indexOf(itemId);
-  if (index > -1) {
-    openDropdowns.value.splice(index, 1);
-  } else {
-    openDropdowns.value.push(itemId);
-  }
-};
-
-const handleLogout = async () => {
-  try {
-    // Emit logout event to parent component
-    emit('logout');
-    
-    // Optional: Clear local storage
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userSession');
-    
-    // Navigate to login page
-    router.push('/login');
-  } catch (error) {
-    console.error('Logout error:', error);
-  }
-};
-
-const isActiveRoute = (routePath) => {
-  return route.path === routePath;
-};
-
-const isActiveChild = (childPath) => {
-  return route.path === childPath || route.path.startsWith(childPath);
-};
-
-const isActiveParent = (children) => {
-  return children.some(child => route.path === child.to);
-};
-
-const updateScreenWidth = () => {
-  screenWidth.value = window.innerWidth;
-};
-
-// Tooltip methods
-const showTooltip = (event, label) => {
-  if (sidebarState.value !== 'icon') return;
-  
-  const rect = event.currentTarget.getBoundingClientRect();
-  tooltipState.value = {
-    visible: true,
-    text: label,
-    top: rect.top + rect.height / 2
-  };
-};
-
-const hideTooltip = () => {
-  tooltipState.value.visible = false;
-};
-
-// Lifecycle hooks
-onMounted(() => {
-  window.addEventListener('resize', updateScreenWidth);
-  
-  if (screenWidth.value < 1024) {
-    sidebarState.value = 'closed';
-  }
-  
-  // Auto-open dropdown if current route is a child
-  const allItems = [...menuItems.value, ...settingsMenuItems];
-  allItems.forEach(item => {
-    if (item.children && isActiveParent(item.children)) {
-      if (!openDropdowns.value.includes(item.id)) {
-        openDropdowns.value.push(item.id);
-      }
-    }
-  });
-});
-
-onUnmounted(() => {
-  window.removeEventListener('resize', updateScreenWidth);
-});
-</script>
-
 <template>
   <div>
     <!-- Toggle Button -->
     <button 
       @click="toggleSidebar" 
-      class="fixed top-1/2 left-4 z-40 p-2 rounded-lg text-gray-700 focus:outline-none transition-all duration-300 transform -translate-y-1/2 bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl"
+      class="fixed top-1/2 z-40 p-2 rounded-lg text-gray-700 focus:outline-none transition-all duration-300 transform -translate-y-1/2 bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl"
       :class="{
         'left-[0px]': sidebarState === 'closed',
         'left-[40px]': sidebarState === 'icon',
@@ -278,22 +19,22 @@ onUnmounted(() => {
     <div 
       v-if="sidebarState !== 'closed' && screenWidth < 1024" 
       @click="closeSidebar" 
-      class="fixed inset-0 bg-transparent z-30 lg:hidden"
+      class="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
     />
     
     <!-- Sidebar -->
-    <div 
-      class="fixed top-16 left-0 z-30 h-[calc(100vh-4rem)] transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg overflow-y-auto overflow-x-visible flex flex-col"
-      :class="{
-        'w-60': sidebarState === 'full',
-        'w-16': sidebarState === 'icon',
-        'w-0': sidebarState === 'closed',
-        'translate-x-0': sidebarState !== 'closed',
-        '-translate-x-full': sidebarState === 'closed'
-      }"
-    >
-      <!-- Main Menu Items -->
-      <div class="py-4 flex-1">
+<div 
+  class="fixed inset-y-0 left-0 z-30 pt-16 transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg flex flex-col"
+  :class="{
+    'w-60': sidebarState === 'full',
+    'w-16': sidebarState === 'icon',
+    'w-0': sidebarState === 'closed',
+    'translate-x-0': sidebarState !== 'closed',
+    '-translate-x-full': sidebarState === 'closed'
+  }"
+>
+      <!-- Scrollable Menu Section -->
+      <div class="flex-1 py-4 overflow-y-auto overflow-x-visible">
         <ul class="space-y-2 font-medium px-2">
           <li v-for="item in menuItems" :key="item.id" class="relative">
             <!-- Regular menu item -->
@@ -377,83 +118,61 @@ onUnmounted(() => {
           </li>
         </ul>
       </div>
-
-      <!-- Settings Section (Bottom) -->
-      <div class="border-t border-gray-200 dark:border-gray-700 py-4">
-        <ul class="space-y-2 font-medium px-2">
-          <li v-for="item in settingsMenuItems" :key="item.id" class="relative">
-            <!-- Settings dropdown menu item -->
-            <div class="relative">
-              <button 
-                @click="toggleDropdown(item.id)"
-                @mouseenter="(e) => showTooltip(e, item.label)"
-                @mouseleave="hideTooltip"
-                class="flex items-center w-full p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
-                :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveParent(item.children) }"
-              >
-                <component :is="item.icon" class="h-6 w-6 flex-shrink-0" />
-                <span 
-                  class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap"
-                  :class="{ 'opacity-0 w-0': sidebarState === 'icon', 'opacity-100': sidebarState === 'full' }"
-                >
-                  {{ item.label }}
-                </span>
-                <ChevronDownIcon 
-                  v-if="sidebarState === 'full'"
-                  class="ml-auto h-4 w-4 transition-transform duration-200"
-                  :class="{ 'rotate-180': openDropdowns.includes(item.id) }"
-                />
-                <span 
-                  v-if="isActiveParent(item.children)" 
-                  class="ml-auto w-2 h-2 bg-green-500 rounded-full"
-                  :class="{ 'opacity-0': sidebarState === 'icon' }"
-                />
-              </button>
-              
-              <!-- Settings dropdown items -->
-              <div 
-                v-if="sidebarState === 'full'"
-                class="overflow-hidden transition-all duration-300"
-                :class="{ 'max-h-0': !openDropdowns.includes(item.id), 'max-h-96': openDropdowns.includes(item.id) }"
-              >
-                <ul class="pl-6 mt-2 space-y-1">
-                  <li v-for="child in item.children" :key="child.id" class="relative">
-                    <router-link 
-                      :to="child.to"
-                      class="flex items-center p-2 text-gray-600 rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-xs"
-                      :class="{ ' bg-green-100 text-blue-700 dark:text-blue-200': isActiveRoute(child.to) }"
-                    >
-                      <component :is="child.icon" class="h-5 w-5 flex-shrink-0" />
-                      <span class="ms-3">{{ child.label }}</span>
-                      <span 
-                        v-if="isActiveRoute(child.to)" 
-                        class="ml-auto w-2 h-2 bg-green-500 rounded-full"
-                      />
-                    </router-link>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </li>
-          
-          <!-- Logout Button -->
-          <li class="relative">
-            <button 
-              @click="handleLogout"
-              @mouseenter="(e) => showTooltip(e, 'Logout')"
-              @mouseleave="hideTooltip"
-              class="flex items-center w-full p-2 text-red-600 rounded-lg dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 text-sm"
-            >
-              <ArrowRightOnRectangleIcon class="h-6 w-6 flex-shrink-0" />
-              <span 
-                class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap"
-                :class="{ 'opacity-0 w-0': sidebarState === 'icon', 'opacity-100': sidebarState === 'full' }"
-              >
-                Logout
-              </span>
-            </button>
-          </li>
-        </ul>
+      
+      <!-- Sticky Bottom Section - User Info, Settings & Logout -->
+      <div class="border-t border-gray-200 dark:border-gray-700 p-2 bg-white dark:bg-gray-800">
+        <!-- User Info (when expanded) -->
+        <div 
+          v-if="sidebarState === 'full' && user"
+          class="mb-2 px-2 py-1"
+        >
+          <div class="text-sm font-medium text-gray-900 dark:text-white truncate">
+            {{ user.name }}
+          </div>
+          <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {{ user.email }}
+          </div>
+        </div>
+        
+        <!-- Settings Button -->
+        <router-link 
+          to="/settings"
+          @mouseenter="(e) => showTooltip(e, 'Settings')"
+          @mouseleave="hideTooltip"
+          class="flex items-center w-full p-2 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium mb-2"
+          :class="{
+            'bg-green-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveRoute('/settings')
+          }"
+        >
+          <CogIcon class="h-5 w-5 flex-shrink-0" :class="{ 'text-green-700': isActiveRoute('/settings') }" />
+          <span 
+            class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap"
+            :class="{ 'opacity-0 w-0': sidebarState === 'icon', 'opacity-100': sidebarState === 'full' }"
+          >
+            Settings
+          </span>
+          <span 
+            v-if="isActiveRoute('/settings')" 
+            class="ml-auto w-2 h-2 bg-green-500 rounded-full"
+            :class="{ 'opacity-0': sidebarState === 'icon' }"
+          />
+        </router-link>
+        
+        <!-- Logout Button -->
+        <button 
+          @click="$emit('logout')"
+          @mouseenter="(e) => showTooltip(e, 'Log Out')"
+          @mouseleave="hideTooltip"
+          class="flex items-center w-full p-2 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200 text-sm font-medium"
+        >
+          <ArrowRightOnRectangleIcon class="h-5 w-5 flex-shrink-0" />
+          <span 
+            class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap"
+            :class="{ 'opacity-0 w-0': sidebarState === 'icon', 'opacity-100': sidebarState === 'full' }"
+          >
+            Log Out
+          </span>
+        </button>
       </div>
     </div>
     
@@ -472,6 +191,234 @@ onUnmounted(() => {
     </Teleport>
   </div>
 </template>
+
+<script setup>
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
+import { useRoute } from 'vue-router';
+import { 
+  UsersIcon, 
+  HomeIcon,
+  ChartBarIcon, 
+  MapIcon, 
+  ClipboardDocumentCheckIcon, 
+  ChevronRightIcon, 
+  ChevronLeftIcon, 
+  ChevronDownIcon,
+  CalendarDaysIcon,
+  DocumentCheckIcon, 
+  ClipboardDocumentListIcon,
+  CogIcon,
+  UserIcon,
+  BuildingOfficeIcon,
+  ClockIcon,
+  ArrowRightOnRectangleIcon
+} from '@heroicons/vue/24/outline';
+
+// Props for customization
+const props = defineProps({
+  customMenuItems: {
+    type: Array,
+    default: () => []
+  },
+  user: {
+    type: Object,
+    default: null
+  }
+});
+
+const emit = defineEmits(['sidebarStateChange', 'logout']);
+
+// Reactive state
+const sidebarState = ref(localStorage.getItem('sidebarState') || 'full');
+const screenWidth = ref(window.innerWidth);
+const openDropdowns = ref([]);
+const route = useRoute();
+
+// Tooltip state
+const tooltipState = ref({
+  visible: false,
+  text: '',
+  top: 0
+});
+
+const defaultMenuItems = [
+  {
+    id: 'dashboard',
+    label: 'Dashboard',
+    icon: HomeIcon,
+    to: '/dashboard'
+  },
+  {
+    id: 'employees',
+    label: 'Employees',
+    icon: UsersIcon,
+    to: '/employees'
+  },
+  {
+    id: 'attendance',
+    label: 'Attendance',
+    icon: ClipboardDocumentCheckIcon,
+    children: [
+      {
+        id: 'live-attendance',
+        label: 'Live Attendance',
+        icon: ClipboardDocumentListIcon,
+        to: '/attendance/view'
+      },
+      {
+        id: 'attendance-records',
+        label: 'Attendance Records',
+        icon: DocumentCheckIcon,
+        to: '/attendance-records'
+      },
+      {
+        id: 'attendance-history',
+        label: 'History',
+        icon: MapIcon,
+        to: '/attendance/history'
+      }
+    ]
+  },
+  {
+    id: 'schedules',
+    label: 'Schedule',
+    icon: CalendarDaysIcon,
+    to: '/schedules'
+  },
+  {
+    id: 'reports',
+    label: 'Reports',
+    icon: ChartBarIcon,
+    children: [
+      {
+        id: 'daily-reports',
+        label: 'Daily Reports',
+        icon: ClockIcon,
+        to: '/reports/daily'
+      },
+      {
+        id: 'monthly-reports',
+        label: 'Monthly Reports',
+        icon: CalendarDaysIcon,
+        to: '/reports/monthly'
+      }
+    ]
+  },
+  {
+    id: 'settings',
+    label: 'Settings',
+    icon: CogIcon,
+    children: [
+      {
+        id: 'profile',
+        label: 'Profile',
+        icon: UserIcon,
+        to: '/profile'
+      },
+      {
+        id: 'company',
+        label: 'Company',
+        icon: BuildingOfficeIcon,
+        to: '/settings/company'
+      }
+    ]
+  }
+];
+
+const menuItems = computed(() => {
+  return props.customMenuItems.length > 0 ? props.customMenuItems : defaultMenuItems;
+});
+
+watch(sidebarState, (newState) => {
+  localStorage.setItem('sidebarState', newState);
+  emit('sidebarStateChange', newState);
+  if (newState === 'icon' || newState === 'closed') {
+    openDropdowns.value = [];
+  }
+  // Hide tooltip when sidebar state changes
+  tooltipState.value.visible = false;
+});
+
+// Methods
+const toggleSidebar = () => {
+  if (sidebarState.value === 'closed') {
+    sidebarState.value = 'icon';
+  } else if (sidebarState.value === 'icon') {
+    sidebarState.value = 'full';
+  } else {
+    sidebarState.value = 'icon';
+  }
+};
+
+const closeSidebar = () => {
+  sidebarState.value = 'closed';
+};
+
+const toggleDropdown = (itemId) => {
+  if (sidebarState.value !== 'full') return;
+  
+  const index = openDropdowns.value.indexOf(itemId);
+  if (index > -1) {
+    openDropdowns.value.splice(index, 1);
+  } else {
+    openDropdowns.value.push(itemId);
+  }
+};
+
+const isActiveRoute = (routePath) => {
+  return route.path === routePath;
+};
+
+const isActiveChild = (childPath) => {
+  return route.path === childPath || route.path.startsWith(childPath);
+};
+
+const isActiveParent = (children) => {
+  return children.some(child => route.path === child.to);
+};
+
+const updateScreenWidth = () => {
+  screenWidth.value = window.innerWidth;
+};
+
+// Tooltip methods
+const showTooltip = (event, label) => {
+  if (sidebarState.value !== 'icon') return;
+  
+  const rect = event.currentTarget.getBoundingClientRect();
+  tooltipState.value = {
+    visible: true,
+    text: label,
+    top: rect.top + rect.height / 2
+  };
+};
+
+const hideTooltip = () => {
+  tooltipState.value.visible = false;
+};
+
+// Lifecycle hooks
+onMounted(() => {
+  window.addEventListener('resize', updateScreenWidth);
+  
+  if (screenWidth.value < 1024) {
+    sidebarState.value = 'closed';
+  }
+  
+  // Auto-open dropdown if current route is a child
+  menuItems.value.forEach(item => {
+    if (item.children && isActiveParent(item.children)) {
+      if (!openDropdowns.value.includes(item.id)) {
+        openDropdowns.value.push(item.id);
+      }
+    }
+  });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateScreenWidth);
+});
+</script>
 
 <style scoped>
 /* Custom scrollbar for sidebar */
