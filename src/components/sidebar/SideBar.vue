@@ -23,16 +23,16 @@
     />
     
     <!-- Sidebar -->
-<div 
-  class="fixed inset-y-0 left-0 z-30 pt-16 transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg flex flex-col"
-  :class="{
-    'w-60': sidebarState === 'full',
-    'w-16': sidebarState === 'icon',
-    'w-0': sidebarState === 'closed',
-    'translate-x-0': sidebarState !== 'closed',
-    '-translate-x-full': sidebarState === 'closed'
-  }"
->
+    <div 
+      class="fixed inset-y-0 left-0 z-30 pt-16 transition-all duration-300 ease-in-out bg-white dark:bg-gray-800 shadow-lg flex flex-col"
+      :class="{
+        'w-60': sidebarState === 'full',
+        'w-[60px]': sidebarState === 'icon',
+        'w-0 overflow-hidden': sidebarState === 'closed',
+        'translate-x-0': sidebarState !== 'closed',
+        '-translate-x-full': sidebarState === 'closed'
+      }"
+    >
       <!-- Scrollable Menu Section -->
       <div class="flex-1 py-4 overflow-y-auto overflow-x-visible">
         <ul class="space-y-2 font-medium px-2">
@@ -43,13 +43,14 @@
               :to="item.to" 
               @mouseenter="(e) => showTooltip(e, item.label)"
               @mouseleave="hideTooltip"
-              class="flex items-center p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 relative"
+              class="flex items-center p-2 rounded-lg transition-colors duration-200 relative"
               :class="{
-                'bg-green-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveRoute(item.to),
+                'bg-green-200 text-black': isActiveRoute(item.to),
+                'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-500': !isActiveRoute(item.to),
                 'opacity-50 pointer-events-none': sidebarState === 'closed'
               }"
             >
-              <component :is="item.icon" class="h-5 w-5 flex-shrink-0" :class="{ 'text-green-700': isActiveRoute(item.to) }" />
+              <component :is="item.icon" class="h-5 w-5 flex-shrink-0" />
               <span 
                 class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap text-sm"
                 :class="{ 'opacity-0 w-0': sidebarState === 'icon', 'opacity-100': sidebarState === 'full' }"
@@ -69,8 +70,11 @@
                 @click="toggleDropdown(item.id)"
                 @mouseenter="(e) => showTooltip(e, item.label)"
                 @mouseleave="hideTooltip"
-                class="flex items-center w-full p-2 text-gray-900 rounded-lg dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-sm"
-                :class="{ 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveParent(item.children) }"
+                class="flex items-center w-full p-2 rounded-lg transition-colors duration-200 text-sm"
+                :class="{ 
+                  'bg-green-200 text-black': isActiveParent(item.children),
+                  'text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700': !isActiveParent(item.children)
+                }"
               >
                 <component :is="item.icon" class="h-6 w-6 flex-shrink-0" />
                 <span 
@@ -101,14 +105,17 @@
                   <li v-for="child in item.children" :key="child.id" class="relative">
                     <router-link 
                       :to="child.to"
-                      class="flex items-center p-2 text-gray-600 rounded-lg dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-xs"
-                      :class="{ ' bg-green-100 text-blue-700 dark:text-blue-200': isActiveRoute(child.to) }"
+                      class="flex items-center p-2 rounded-lg transition-colors duration-200 text-xs"
+                      :class="{ 
+                        'bg-blue-300 text-black': isActiveRoute(child.to),
+                        'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700': !isActiveRoute(child.to)
+                      }"
                     >
                       <component :is="child.icon" class="h-5 w-5 flex-shrink-0" />
                       <span class="ms-3">{{ child.label }}</span>
                       <span 
                         v-if="isActiveRoute(child.to)" 
-                        class="ml-auto w-2 h-2 bg-green-500 rounded-full"
+                        class="ml-auto w-2 h-2 bg-blue-500 rounded-full"
                       />
                     </router-link>
                   </li>
@@ -120,7 +127,10 @@
       </div>
       
       <!-- Sticky Bottom Section - User Info, Settings & Logout -->
-      <div class="border-t border-gray-200 dark:border-gray-700 p-2 bg-white dark:bg-gray-800">
+      <div 
+        class="border-t border-gray-200 dark:border-gray-700 p-2 bg-white dark:bg-gray-800 transition-all duration-300"
+        :class="{ 'opacity-0 pointer-events-none': sidebarState === 'closed' }"
+      >
         <!-- User Info (when expanded) -->
         <div 
           v-if="sidebarState === 'full' && user"
@@ -139,12 +149,13 @@
           to="/settings"
           @mouseenter="(e) => showTooltip(e, 'Settings')"
           @mouseleave="hideTooltip"
-          class="flex items-center w-full p-2 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-sm font-medium mb-2"
+          class="flex items-center w-full p-2 rounded-lg transition-colors duration-200 text-sm font-medium mb-2"
           :class="{
-            'bg-green-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200': isActiveRoute('/settings')
+            'bg-black text-white': isActiveRoute('/settings'),
+            'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700': !isActiveRoute('/settings')
           }"
         >
-          <CogIcon class="h-5 w-5 flex-shrink-0" :class="{ 'text-green-700': isActiveRoute('/settings') }" />
+          <CogIcon class="h-5 w-5 flex-shrink-0" />
           <span 
             class="ms-3 transition-all duration-200 overflow-hidden whitespace-nowrap"
             :class="{ 'opacity-0 w-0': sidebarState === 'icon', 'opacity-100': sidebarState === 'full' }"
@@ -153,7 +164,7 @@
           </span>
           <span 
             v-if="isActiveRoute('/settings')" 
-            class="ml-auto w-2 h-2 bg-green-500 rounded-full"
+            class="ml-auto w-2 h-2 bg-white rounded-full"
             :class="{ 'opacity-0': sidebarState === 'icon' }"
           />
         </router-link>
@@ -301,25 +312,6 @@ const defaultMenuItems = [
         label: 'Monthly Reports',
         icon: CalendarDaysIcon,
         to: '/reports/monthly'
-      }
-    ]
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: CogIcon,
-    children: [
-      {
-        id: 'profile',
-        label: 'Profile',
-        icon: UserIcon,
-        to: '/profile'
-      },
-      {
-        id: 'company',
-        label: 'Company',
-        icon: BuildingOfficeIcon,
-        to: '/settings/company'
       }
     ]
   }

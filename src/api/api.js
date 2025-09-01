@@ -1,13 +1,16 @@
 export const useApiUrl = () => {
+  const protocol = window.location.protocol; // 'http:' or 'https:'
+  const host = window.location.hostname;
+  const port = 8000;
 
-const api = 'http://127.0.0.1:8000/api';
+  const api = `${protocol}//${host}:${port}/api`;
 
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
     return {
       headers: {
-        Authorization: `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     };
   };
 

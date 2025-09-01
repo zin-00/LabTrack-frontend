@@ -1,144 +1,199 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, onMounted, watch, computed, toRef, toRefs } from 'vue';
 import AuthenticatedLayout from '../../layouts/auth/AuthenticatedLayout.vue';
 import Table from '../../components/table/Table.vue';
 import { useToast } from 'vue-toastification';
 import * as XLSX from 'xlsx';
 import { useComputerLogStore } from '../../composable/computerLog';
-import { DocumentArrowDownIcon, ExclamationCircleIcon, FunnelIcon} from '@heroicons/vue/24/outline';
+import { DocumentArrowDownIcon, ExclamationCircleIcon, FunnelIcon } from '@heroicons/vue/24/outline';
+import { storeToRefs } from 'pinia';
 
 const toast = useToast();
-const loading = ref(false);
-const showFilters = ref(false);
+const computerLogStore = useComputerLogStore();
 
-const func = useComputerLogStore();
+const {
+    computerLogs,
+    showFilters,
+    dateFilter,
+    isLoading,
+    selectedStatus
+} = toRefs(computerLogStore);
 
-const pagination = reactive({
-  current_page: 1,
-  last_page: 1,
-  total: 0,
-  per_page: 7,          
-  from: 1,
-  to: 10,
-});
+const {
+    fetchComputerLogs,
+    fetchAllLogsForExport,
+    clearFilters: clearStoreFilters
+} = computerLogStore;
 
-const selectedStatus = ref('all');
+// Apply filters when date values change
+const applyFilters = () => {
+    fetchComputerLogs(1); // Always go to first page when filtering
+};
 
-// Date filter
-const dateFilter = ref({
-  from: '',
-  to: '',
-});
-
-const filteredLogs = computed(() => {
-  if (!func.computerLogs.data) return [];
-  
-  return func.computerLogs.data.filter((log) => {
-    if (dateFilter.value.from && new Date(log.created_at) < new Date(dateFilter.value.from)) return false;
-    if (dateFilter.value.to && new Date(log.created_at) > new Date(dateFilter.value.to)) return false;
-    return true;
-  });
+// Watch for date filter changes
+watch([() => dateFilter.value.from, () => dateFilter.value.to], () => {
+    // Use a debounce to avoid too many API calls
+    clearTimeout(window.filterTimeout);
+    window.filterTimeout = setTimeout(applyFilters, 500);
 });
 
 const fetchLogs = async (page = 1) => {
-  func.fetchComputerLogs(page)
-}
-
-const EventListener = () => {
-  if (!window.Echo) {
-    console.error('Echo is not initialized!');
-    return;
-  }
-  
-  window.Echo.channel('computers')
-    .listen('ComputerUnlocked', (e) => {
-      toast.success('Computer unlocked by ' + (e.user?.name || 'Unknown'));
-
-      logs.value.unshift({
-        id: e.log?.id || Date.now(),
-        computer_id: e.computer?.id || 'Unknown',
-        user: e.user?.name || 'Unknown',
-        ip: e.ip || 'N/A',
-        event_type: 'Unlock',
-        created_at: new Date().toISOString(),
-      });
-
-      if (logs.value.length > 50) {
-        logs.value = logs.value.slice(0, 50);
-      }
-    });
+    fetchComputerLogs(page);
 };
 
-onMounted(() => {
-  EventListener();
-  fetchLogs();
-});
-
-// Export to Excel
-const exportToExcel = () => {
-  const worksheet = XLSX.utils.json_to_sheet(filteredLogs.value);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'ActivityLogs');
-  XLSX.writeFile(workbook, 'activity_logs.xlsx');
+// Clear filters function
+const clearFilters = () => {
+    clearStoreFilters();
 };
 
-const generateIncidentReport = () => {
-  // Filter for potential incidents (you can customize this logic)
-  const incidents = filteredLogs.value.filter(log => 
-    log.event_type === 'Error' || 
-    log.event_type === 'Warning' ||
-    log.uptime === 'N/A'
-  );
-  
-  const worksheet = XLSX.utils.json_to_sheet(incidents);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'IncidentReport');
-  XLSX.writeFile(workbook, 'incident_report.xlsx');
+// Export to Excel - Now fetches ALL data based on filters
+const exportToExcel = async () => {
+    try {
+        isLoading.value = true;
+        const allLogs = await fetchAllLogsForExport();
+        
+        if (allLogs.length === 0) {
+            toast.warning('No data to export');
+            return;
+        }
+
+        // Format data for Excel
+        const formattedData = allLogs.map(log => ({
+            'Computer': `PC-${log.computer?.computer_number || 'N/A'}`,
+            'Laboratory': log.computer?.laboratory?.name || 'N/A',
+            'Student ID': log.student?.student_id || '—',
+            'Full Name': getFullName(log),
+            'IP Address': log.ip_address || 'N/A',
+            'MAC Address': log.mac_address || 'N/A',
+            'Event': log.event_type || 'N/A',
+            'Uptime': log.uptime || '—',
+            'Date': formatDate(log.created_at),
+            'Time': formatTime(log.created_at),
+            'Timestamp': log.created_at
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(formattedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'ActivityLogs');
+        
+        // Generate filename with date range
+        let fileName = 'activity_logs';
+        if (dateFilter.value.from && dateFilter.value.to) {
+            fileName += `_${dateFilter.value.from}_to_${dateFilter.value.to}`;
+        } else if (dateFilter.value.from) {
+            fileName += `_from_${dateFilter.value.from}`;
+        } else if (dateFilter.value.to) {
+            fileName += `_to_${dateFilter.value.to}`;
+        }
+        
+        XLSX.writeFile(workbook, `${fileName}.xlsx`);
+        toast.success('Excel exported successfully');
+    } catch (error) {
+        toast.error('Failed to export Excel');
+        console.error('Error exporting Excel:', error);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Generate incident report - Now fetches ALL data based on filters
+const generateIncidentReport = async () => {
+    try {
+        isLoading.value = true;
+        const allLogs = await fetchAllLogsForExport();
+        
+        if (allLogs.length === 0) {
+            toast.warning('No data to generate report');
+            return;
+        }
+
+        // Filter for potential incidents
+        const incidents = allLogs.filter(log => 
+            log.event_type === 'Error' || 
+            log.event_type === 'Warning' ||
+            log.uptime === 'N/A'
+        );
+
+        if (incidents.length === 0) {
+            toast.info('No incidents found in the selected date range');
+            return;
+        }
+
+        // Format data for Excel
+        const formattedData = incidents.map(log => ({
+            'Computer': `PC-${log.computer?.computer_number || 'N/A'}`,
+            'Laboratory': log.computer?.laboratory?.name || 'N/A',
+            'Student ID': log.student?.student_id || '—',
+            'Full Name': getFullName(log),
+            'IP Address': log.ip_address || 'N/A',
+            'Event Type': log.event_type || 'N/A',
+            'Uptime': log.uptime || '—',
+            'Date': formatDate(log.created_at),
+            'Time': formatTime(log.created_at),
+            'Timestamp': log.created_at
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(formattedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'IncidentReport');
+        
+        // Generate filename with date range
+        let fileName = 'incident_report';
+        if (dateFilter.value.from && dateFilter.value.to) {
+            fileName += `_${dateFilter.value.from}_to_${dateFilter.value.to}`;
+        }
+        
+        XLSX.writeFile(workbook, `${fileName}.xlsx`);
+        toast.success('Incident report generated successfully');
+    } catch (error) {
+        toast.error('Failed to generate incident report');
+        console.error('Error generating incident report:', error);
+    } finally {
+        isLoading.value = false;
+    }
 };
 
 // Helper functions
 const getFullName = (log) => {
-  if (log.student?.first_name || log.student?.last_name) {
-    return `${log.student.first_name || ''} ${log.student.last_name || ''}`.trim()
-  }
-  return log.student_id || 'N/A'
-}
+    if (log.student?.first_name || log.student?.last_name) {
+        return `${log.student.first_name || ''} ${log.student.last_name || ''}`.trim();
+    }
+    return log.student_id || 'N/A';
+};
 
 const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  return new Date(dateString).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  })
-}
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+};
 
 const formatTime = (dateString) => {
-  if (!dateString) return ''
-  return new Date(dateString).toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  })
-}
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+    });
+};
 
 const getEventBadge = (eventType) => {
-  const eventClasses = {
-    'Login': 'bg-green-100 text-green-800',
-    'Logout': 'bg-blue-100 text-blue-800',
-    'Unlock': 'bg-purple-100 text-purple-800',
-    'Lock': 'bg-gray-100 text-gray-800',
-    'Error': 'bg-red-100 text-red-800',
-    'Warning': 'bg-yellow-100 text-yellow-800',
-  }
-  return eventClasses[eventType] || 'bg-gray-100 text-gray-800'
-}
+    const eventClasses = {
+        'Login': 'bg-green-100 text-green-800',
+        'Logout': 'bg-blue-100 text-blue-800',
+        'Unlock': 'bg-purple-100 text-purple-800',
+        'Lock': 'bg-gray-100 text-gray-800',
+        'Error': 'bg-red-100 text-red-800',
+        'Warning': 'bg-yellow-100 text-yellow-800',
+    };
+    return eventClasses[eventType] || 'bg-gray-100 text-gray-800';
+};
 
-const clearFilters = () => {
-  selectedStatus.value = 'all';
-  dateFilter.value.from = '';
-  dateFilter.value.to = '';
-}
+onMounted(() => {
+    fetchLogs();
+});
 </script>
 
 <template>
@@ -148,14 +203,14 @@ const clearFilters = () => {
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
         <div>
           <h2 class="text-2xl font-bold text-gray-900">Activity Logs</h2>
-          <p class="mt-1 text-sm text-gray-600">Monitor computer usage and system events</p>
+          <p class="mt-1 text-xs text-gray-600">Monitor computer usage and system events</p>
         </div>
         
         <!-- Actions -->
         <div class="mt-4 sm:mt-0 flex flex-col sm:flex-row gap-2">
           <button
             @click="showFilters = !showFilters"
-            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            class="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           >
             <FunnelIcon class="w-4 h-4" />
             Filters
@@ -163,7 +218,7 @@ const clearFilters = () => {
           
           <button
             @click="generateIncidentReport"
-            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-md transition-colors"
+            class="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-white bg-orange-600 hover:bg-orange-700 rounded-md transition-colors"
           >
             <ExclamationCircleIcon class="w-4 h-4" />
             Incident Report
@@ -171,7 +226,7 @@ const clearFilters = () => {
 
           <button
             @click="exportToExcel"
-            class="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+            class="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-white bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
           >
             <DocumentArrowDownIcon class="w-4 h-4" />
             Export Excel
@@ -186,20 +241,6 @@ const clearFilters = () => {
       >
         <div class="flex flex-col lg:flex-row gap-4 items-start lg:items-end">
           <div class="flex flex-col sm:flex-row gap-4 flex-1">
-            <!-- Status Filter -->
-            <div class="min-w-[160px]">
-              <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
-              <select
-                v-model="selectedStatus"
-                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="maintenance">Maintenance</option>
-              </select>
-            </div>
-
             <!-- Date Range -->
             <div class="flex gap-4">
               <div>
@@ -207,7 +248,7 @@ const clearFilters = () => {
                 <input 
                   type="date" 
                   v-model="dateFilter.from" 
-                  class="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
@@ -216,7 +257,7 @@ const clearFilters = () => {
                 <input 
                   type="date" 
                   v-model="dateFilter.to" 
-                  class="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  class="px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -226,7 +267,7 @@ const clearFilters = () => {
           <div class="flex gap-2">
             <button
               @click="clearFilters"
-              class="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
+              class="px-3 py-2 text-xs text-gray-600 hover:text-gray-800 transition-colors"
             >
               Clear
             </button>
@@ -236,9 +277,9 @@ const clearFilters = () => {
 
       <!-- Results Summary -->
       <div class="bg-white border border-gray-200 rounded-lg p-4 mb-4">
-        <div class="flex items-center justify-between text-sm">
+        <div class="flex items-center justify-between text-xs">
           <span class="text-gray-600">
-            Showing <span class="font-medium">{{ filteredLogs.length }}</span> logs
+            Showing <span class="font-medium">{{ computerLogs.data?.length || 0 }}</span> logs
             <span v-if="dateFilter.from || dateFilter.to" class="text-blue-600">
               (filtered)
             </span>
@@ -251,11 +292,10 @@ const clearFilters = () => {
 
       <!-- Table -->
       <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <Table :pagination="func.computerLogs" :loading="func.isLoading" :users="filteredLogs">
+        <Table :pagination="computerLogs" :loading="isLoading" :users="computerLogs.data || []" @page-change="fetchLogs">
           <template #header>
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-3 py-3 text-xs font-medium text-gray-600 text-left">ID</th>
                 <th class="px-3 py-3 text-xs font-medium text-gray-600 text-left">Computer</th>
                 <th class="px-3 py-3 text-xs font-medium text-gray-600 text-left hidden md:table-cell">Laboratory</th>
                 <th class="px-3 py-3 text-xs font-medium text-gray-600 text-left">Student ID</th>
@@ -271,42 +311,39 @@ const clearFilters = () => {
 
           <template #default>
             <tr 
-              v-for="log in filteredLogs" 
+              v-for="log in computerLogs.data" 
               :key="log.id"
               class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-b-0"
             >
-              <td class="px-3 py-4 text-sm font-medium text-gray-900">
-                #{{ log.id }}
-              </td>
-              <td class="px-3 py-4 text-sm text-gray-900">
+              <td class="px-3 py-1 text-xs text-gray-900">
                 <span class="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
                   PC-{{ log.computer?.computer_number || 'N/A' }}
                 </span>
               </td>
-              <td class="px-3 py-4 text-sm text-gray-700 hidden md:table-cell">
+              <td class="px-3 py-1 text-xs text-gray-700 hidden md:table-cell">
                 <span class="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
                   {{ log.computer?.laboratory?.name || 'N/A' }}
                 </span>
               </td>
-              <td class="px-3 py-4 text-sm font-medium text-gray-900">
+              <td class="px-3 py-1 text-xs font-medium text-gray-900">
                 {{ log.student?.student_id || '—' }}
               </td>
-              <td class="px-3 py-4 text-sm text-gray-900 hidden sm:table-cell">
+              <td class="px-3 py-1 text-xs text-gray-900 hidden sm:table-cell">
                 <div class="max-w-xs truncate">
                   {{ getFullName(log) }}
                 </div>
               </td>
-              <td class="px-3 py-4 text-sm text-gray-700 hidden lg:table-cell">
+              <td class="px-3 py-1 text-xs text-gray-700 hidden lg:table-cell">
                 <code class="text-xs bg-gray-100 px-2 py-1 rounded">
                   {{ log.ip_address || 'N/A' }}
                 </code>
               </td>
-              <td class="px-3 py-4 text-sm text-gray-700 hidden xl:table-cell">
+              <td class="px-3 py-1 text-xs text-gray-700 hidden xl:table-cell">
                 <code class="text-xs bg-gray-100 px-2 py-1 rounded">
                   {{ log.mac_address || 'N/A' }}
                 </code>
               </td>
-              <td class="px-3 py-4 text-sm">
+              <td class="px-3 py-1 text-xs">
                 <span 
                   :class="getEventBadge(log.event_type)"
                   class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
@@ -314,10 +351,10 @@ const clearFilters = () => {
                   {{ log.event_type || 'N/A' }}
                 </span>
               </td>
-              <td class="px-3 py-4 text-sm text-gray-700 hidden lg:table-cell">
+              <td class="px-3 py-1 text-xs text-gray-700 hidden lg:table-cell">
                 {{ log.uptime || '—' }}
               </td>
-              <td class="px-3 py-4 text-sm text-gray-700">
+              <td class="px-3 py-1 text-xs text-gray-700">
                 <div class="text-xs">
                   <div class="font-medium">{{ formatDate(log.created_at) }}</div>
                   <div class="text-gray-500">{{ formatTime(log.created_at) }}</div>
@@ -326,15 +363,15 @@ const clearFilters = () => {
             </tr>
 
             <!-- Empty State -->
-            <tr v-if="!filteredLogs || filteredLogs.length === 0">
+            <tr v-if="!computerLogs.data || computerLogs.data.length === 0">
               <td colspan="10" class="px-3 py-12 text-center text-gray-500">
                 <div class="flex flex-col items-center gap-3">
                   <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                   </svg>
                   <div>
-                    <h3 class="text-sm font-medium text-gray-900">No activity logs found</h3>
-                    <p class="text-sm text-gray-500 mt-1">Try adjusting your filters or check back later.</p>
+                    <h3 class="text-xs font-medium text-gray-900">No activity logs found</h3>
+                    <p class="text-xs text-gray-500 mt-1">Try adjusting your filters or check back later.</p>
                   </div>
                 </div>
               </td>
@@ -346,7 +383,7 @@ const clearFilters = () => {
       <!-- Mobile Card View for very small screens -->
       <div class="block sm:hidden mt-6 space-y-3">
         <div 
-          v-for="log in filteredLogs" 
+          v-for="log in computerLogs.data" 
           :key="`mobile-${log.id}`"
           class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
         >

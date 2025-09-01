@@ -3,16 +3,12 @@ import { ref, computed, reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import AuthenticatedLayout from '../../layouts/auth/AuthenticatedLayout.vue';
 import Button from '../../components/button/Button.vue';
-import { 
-    TrashIcon, 
-    PencilIcon, 
-    DocumentMagnifyingGlassIcon, 
-    FunnelIcon, 
-    XMarkIcon,
-    ArrowDownTrayIcon, 
-    UserPlusIcon, 
-    ArrowPathIcon
-} from '@heroicons/vue/24/outline';
+
+import { FolderDownIcon, FolderUpIcon,
+        RefreshCcwIcon,
+        UserRoundPlusIcon,
+        XIcon
+    } from 'lucide-vue-next';
 import Table from '../../components/table/Table.vue';
 import { useToast } from 'vue-toastification';
 import { watch } from 'vue';
@@ -21,6 +17,8 @@ import TextInput from '../../components/input/TextInput.vue';
 import {useExcelStore} from '../../composable/excel';
 import { useStudentStore } from '../../composable/student';
 import { useProgramStore } from '../../composable/program';
+import InputLabel from '../../components/input/InputLabel.vue';
+
 
 const toast = useToast();
 
@@ -226,7 +224,7 @@ onMounted(() => {
         <div class="py-4 max-w-7xl mx-auto sm:px-4 bg-white">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-900">Student Management</h2>
-                    <p class="mt-1 text-sm text-gray-600">
+                    <p class="mt-1 text-xs text-gray-600">
                         Manage student records with full CRUD operations and bulk import via Excel file.
                     </p>
                 </div>
@@ -247,7 +245,7 @@ onMounted(() => {
                         @click="searchQuery = ''"
                         class="absolute right-2 top-2 text-gray-400 hover:text-gray-600"
                     >
-                        <XMarkIcon class="w-4 h-4" />
+                        <XIcon :stroke-width="1.50" class="w-4 h-4" />
                     </button>
                     </div>
 
@@ -281,31 +279,34 @@ onMounted(() => {
 
                 <!-- Right: Action Buttons -->
                 <div class="flex gap-2">
-                    <button
+                    <Button
                         title="Refresh"
                         @click="refreshData"
                         class="p-2 text-white  bg-gray-800 hover:bg-gray-700  rounded-md transition duration-200"
                         >
-                        <ArrowPathIcon class="h-5 w-5" />
-                    </button>
+                        <RefreshCcwIcon :stroke-width="1.50" class="h-5 w-5" />
+                    </Button>
 
-                    <button
+                    <Button
                         @click="openAddModal"
                         title="Add User"
                         class="p-2  text-white  bg-gray-800 hover:bg-gray-700 rounded-md transition duration-200"
                         >
-                        <UserPlusIcon class="h-5 w-5" />
-                    </button>
+                        <UserRoundPlusIcon :stroke-width="1.50" class="h-5 w-5" />
+                    </Button>
 
-                    <button
+                    <Button
                         @click="xl.isImportModalOpen = true"
                         title="Import Users"
                         class="p-2  text-white  bg-gray-800 hover:bg-gray-700 rounded-md transition duration-200"
                         >
-                        <ArrowDownTrayIcon class="h-5 w-5" />
-                    </button>
+                        <FolderDownIcon :stroke-width="1.50" class="h-5 w-5" />
+                    </Button>
+                    <Button class="p-2 text-white bg-gray-800 hover:bg-gray-700 rounded-md transition duration-200">
+                        <FolderUpIcon :stroke-width="1.50" class="h-5 w-5" />
+                    </Button>
                 </div>
-                </div>
+            </div>
 
                
                 <!-- User Table-->
@@ -321,35 +322,50 @@ onMounted(() => {
                     />
                                     
                 </div>
-                <!-- Delete Confirmation Modal -->
+               <!-- Delete Confirmation Modal -->
                 <Modal :show="isConfirmationModalOpen" @close="isConfirmationModalOpen = false">
-                    <div class="bg-white p-6 rounded-2xl shadow-2xl w-full max-w-md mx-auto relative">
-                        <div class="flex items-center gap-3 mb-4">
-                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 9v2m0 4h.01M12 19c3.866 0 7-3.134 7-7S15.866 5 12 5 5 8.134 5 12s3.134 7 7 7z"/>
-                        </svg>
-                        <h2 class="text-xl font-semibold text-gray-800">Confirm Deletion</h2>
-                        </div>
+                    <div class="relative inset-0 flex items-center justify-center p-4 z-50">
+                        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-auto relative border border-gray-200">
+                            <!-- Header -->
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <div class="flex items-center gap-4">
+                                    <div class="flex-shrink-0 w-12 h-12 bg-red-50 border border-red-200 rounded-full flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M12 9v2m0 4h.01M12 19c3.866 0 7-3.134 7-7S15.866 5 12 5 5 8.134 5 12s3.134 7 7 7z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h2 class="text-lg font-semibold text-gray-900">Confirm Deletion</h2>
+                                        <p class="text-sm text-gray-500">This action cannot be undone</p>
+                                    </div>
+                                </div>
+                            </div>
 
-                        <p class="text-gray-600 text-sm leading-relaxed">
-                        Are you sure you want to delete this user? This action cannot be undone.
-                        </p>
+                            <!-- Content -->
+                            <div class="px-6 py-4">
+                                <p class="text-gray-700 leading-relaxed">
+                                    Are you sure you want to delete this student? All associated data and records will be permanently removed from the system.
+                                </p>
+                            </div>
 
-                        <div class="flex justify-end gap-3 mt-6">
-                        <button
-                            @click="isConfirmationModalOpen = false"
-                            class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-                        >
-                            Cancel
-                        </button>
-
-                        <button
-                            @click="deleteStudent_func"
-                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                        >
-                            Yes, Delete
-                        </button>
+                            <!-- Footer -->
+                            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                                <div class="flex justify-end gap-3">
+                                    <button
+                                        @click="isConfirmationModalOpen = false"
+                                        class="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all font-medium"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        @click="deleteStudent_func"
+                                        class="px-4 py-2.5 bg-black text-white rounded-lg hover:bg-gray-900 transition-all font-medium shadow-sm"
+                                    >
+                                        Delete Student
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </Modal>
@@ -442,120 +458,151 @@ onMounted(() => {
 
 
 
-            <!-- Store and Edit User Modal -->
-            <Modal :show="modalState" @close="modalState = false">
-                <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-5xl mx-auto relative">
-                    <h2 class="text-xl font-bold mb-4">
-                    {{ selectedUser ? 'Edit Student' : 'Add New Student' }}
+<!-- Store and Edit User Modal -->
+<Modal :show="modalState" @close="modalState = false">
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-auto relative border border-gray-200">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold text-gray-900">
+                        {{ selectedUser ? 'Edit Student' : 'Add New Student' }}
                     </h2>
+                    <button
+                        @click="modalState = false"
+                        class="p-2 hover:bg-gray-200 rounded-lg transition-colors text-gray-500 hover:text-gray-700"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
+            <!-- Form Content -->
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Student ID -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">Student ID</label>
                         <TextInput
-                        v-model="studentData.student_id"
-                        type="text"
-                        class="w-full px-2 py-[7px] border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            v-model="studentData.student_id"
+                            type="text"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all bg-white text-gray-900"
+                            placeholder="Enter student ID"
                         />
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">RFID UID</label>
+                    <!-- RFID UID -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">RFID UID</label>
                         <TextInput
-                        v-model="studentData.rfid_uid"
-                        type="text"
-                        class="w-full px-2 py-[7px] border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            v-model="studentData.rfid_uid"
+                            type="text"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all bg-white text-gray-900"
+                            placeholder="Scan or enter RFID"
                         />
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                    <!-- First Name -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">First Name</label>
                         <TextInput
-                        v-model="studentData.first_name"
-                        type="text"
-                        class="w-full px-2 py-[7px] border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            v-model="studentData.first_name"
+                            type="text"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all bg-white text-gray-900"
+                            placeholder="Enter first name"
                         />
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
+                    <!-- Middle Name -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">Middle Name</label>
                         <TextInput
-                        v-model="studentData.middle_name"
-                        type="text"
-                        class="w-full px-2 py-[7px] border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            v-model="studentData.middle_name"
+                            type="text"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all bg-white text-gray-900"
+                            placeholder="Enter middle name (optional)"
                         />
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                    <!-- Last Name -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">Last Name</label>
                         <TextInput
-                        v-model="studentData.last_name"
-                        type="text"
-                        class="w-full px-2 py-[7px] border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            v-model="studentData.last_name"
+                            type="text"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all bg-white text-gray-900"
+                            placeholder="Enter last name"
                         />
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <!-- Email -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
                         <TextInput
-                        v-model="studentData.email"
-                        type="email"
-                        class="w-full px-2 py-[7px] border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            v-model="studentData.email"
+                            type="email"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all bg-white text-gray-900"
+                            placeholder="Enter email address"
                         />
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Program</label>
+                    <!-- Program -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">Program</label>
                         <select
-                        v-model="studentData.program_id"
-                        class="w-full p-2 py-[7px] border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            v-model="studentData.program_id"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all bg-white text-gray-900"
                         >
-                        <option disabled value="">-- Select Program --</option>
-                        <!-- Debug: -->
-                        <div v-if="!prog.programs.length">Loading programs...</div>
-                        <option 
-                            v-for="program in prog.programs" 
-                            :key="program.id" 
-                            :value="program.id"
-                        >
-                            {{ program.program_code }}
-                        </option>
+                            <option disabled value="">-- Select Program --</option>
+                            <option 
+                                v-for="program in prog.programs" 
+                                :key="program.id" 
+                                :value="program.id"
+                            >
+                                {{ program.program_code }}
+                            </option>
                         </select>
+                        <div v-if="!prog.programs.length" class="text-sm text-gray-500 italic">
+                            Loading programs...
+                        </div>
                     </div>
 
                     <!-- Status -->
-                     <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <div class="space-y-2">
+                        <label class="block text-sm font-medium text-gray-700">Status</label>
                         <select
-                        v-model="studentData.status"
-                        class="w-full p-2 py-[7px] border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                            v-model="studentData.status"
+                            class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition-all bg-white text-gray-900"
                         >
-                        <option disabled value="">-- Select Status --</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                        <option value="restricted">Restricted</option>
+                            <option disabled value="">-- Select Status --</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="restricted">Restricted</option>
                         </select>
-                     </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="flex justify-end gap-2 mt-6">
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                <div class="flex justify-end gap-3">
                     <button
                         @click="modalState = false"
-                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition"
+                        class="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all font-medium"
                     >
                         Cancel
                     </button>
                     <button
                         @click="saveStudent"
-                        class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+                        class="px-5 py-2.5 bg-black text-white rounded-lg hover:bg-gray-900 transition-all font-medium shadow-sm"
                     >
-                        Save
+                        {{ selectedUser ? 'Update Student' : 'Save Student' }}
                     </button>
-                    </div>
                 </div>
-            </Modal>
-
+            </div>
+        </div>
+</Modal>
             </div> 
     </AuthenticatedLayout>
 </template>

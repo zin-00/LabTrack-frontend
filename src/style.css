@@ -1,6 +1,14 @@
+/* src/style.css */
 @import "tailwindcss";
-html, body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
+
+@font-face {
+  font-family: 'Mokoto';
+  src: url('/src/assets/fonts/Mokoto-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* use it via Tailwind’s arbitrary font-family */
+.font-mokoto {
+  font-family: 'Mokoto', sans-serif;
 }

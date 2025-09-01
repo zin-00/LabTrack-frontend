@@ -1,3 +1,140 @@
+
+<script setup>
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { 
+        MailWarningIcon,
+        LaptopMinimalIcon,
+        FlaskConicalIcon,
+        LayoutPanelLeftIcon,
+        FolderMinusIcon,
+        MailIcon,
+        FolderKanbanIcon,
+        TicketsIcon
+        } from 'lucide-vue-next';
+import { 
+        HomeModernIcon,
+        ComputerDesktopIcon,
+        AdjustmentsHorizontalIcon,
+        UsersIcon,
+        EnvelopeIcon,
+        AcademicCapIcon
+        } from '@heroicons/vue/24/outline';
+import { 
+        AkDashboard,
+        LaUserTieSolid,
+        CaReportData
+        } from '@kalimahapps/vue-icons';
+import { useAuthStore } from '../../composable/useAuth';
+import SideBar from '../../components/sidebar/SideBar.vue';
+
+const auth = useAuthStore();
+const router = useRouter();
+const showingNavigationDropdown = ref(false);
+const showingSettingsDropdown = ref(false);
+
+const sidebarState = ref(localStorage.getItem('sidebarState') || 'full');
+
+// Watch for sidebar state changes and update localStorage
+watch(sidebarState, (newState) => {
+  localStorage.setItem('sidebarState', newState);
+}, { immediate: true });
+
+const handleSidebarChange = (state) => {
+  sidebarState.value = state;
+};
+
+// Computed property for main content classes - this ensures reactivity
+const mainContentClasses = computed(() => {
+  const classes = [];
+  
+  switch (sidebarState.value) {
+    case 'full':
+      classes.push('lg:ml-60');
+      break;
+    case 'icon':
+      classes.push('lg:ml-16');
+      break;
+    case 'closed':
+    default:
+      classes.push('ml-0');
+      break;
+  }
+  
+  return classes.join(' ');
+});
+
+const SideItems = ref([
+  { id: 'dashboard',        label: 'Dashboard',         icon: AkDashboard, to: '/dashboard'},
+  { id: 'users',            label: 'Users',  icon: UsersIcon, to: '/users' , children: [
+    {
+        id: 'students',     label: 'Students', icon: AcademicCapIcon, to: '/students'
+    },
+    {
+        id: 'admin',        label: 'Admin', icon: LaUserTieSolid, to: '/admin'
+    }
+  ]},
+  { id: 'computers',        label: 'Computers',         icon: LaptopMinimalIcon, to: '/computers' },
+  { id: 'laboratory',       label: 'Laboratory',        icon: FlaskConicalIcon, to: '/laboratory' },
+  { id: 'computer_logs',    label: 'Logs',              icon: FolderMinusIcon, to: '/computer_logs'},
+  { id: 'request_access',   label: 'Request Access',    icon: MailIcon, to: '/request-access'},
+  { id: 'reports',          label: 'Reports',           icon: TicketsIcon, to: '/reports'}
+]);
+
+const logout_func = async () => {
+  try {
+    await auth.logout();
+    // Clear sidebar state on logout
+    localStorage.removeItem('sidebarState');
+    router.push('/login');
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Still redirect even if logout fails
+    router.push('/login');
+  }
+};
+
+const closeDropdowns = () => {
+  showingSettingsDropdown.value = false;
+  showingNavigationDropdown.value = false;
+};
+
+const toggleSettingsDropdown = () => {
+  showingSettingsDropdown.value = !showingSettingsDropdown.value;
+};
+
+const handleClickOutside = (event) => {
+  if (!(event.target.closest('.dropdown-container'))) {
+    closeDropdowns();
+  }
+};
+
+// Handle window resize to adjust sidebar on mobile
+const handleResize = () => {
+  if (window.innerWidth < 1024 && sidebarState.value !== 'closed') {
+    sidebarState.value = 'closed';
+  }
+};
+
+onMounted( async () => {
+  document.addEventListener('click', handleClickOutside);
+  window.addEventListener('resize', handleResize);
+  
+  if(!auth.user){
+    await auth.loadUser()
+  }
+  
+  // Set initial sidebar state based on screen size
+  if (window.innerWidth < 1024) {
+    sidebarState.value = 'closed';
+  }
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+  window.removeEventListener('resize', handleResize);
+});
+</script>
 <template>
     <div>
         <div class="min-h-screen bg-gray-100">
@@ -7,14 +144,13 @@
                     <div class="flex h-16 justify-between">
                         <div class="flex">
                             <!-- Logo -->
-                            <div class="flex items-center">
-                                <router-link to="/dashboard" class="flex items-center">
-                                    <img src="@/assets/sfxclogo.png" alt="" srcset="" class="h-8 w-8 sm:h-10 sm:w-10" />
-                                    <span class="ms-2 text-lg sm:text-xl font-semibold text-gray-900 hidden sm:block">LabTrack</span>
-                                    <span class="ms-2 text-sm font-semibold text-gray-900 sm:hidden">LT</span>
-                                </router-link>
-                            </div>
-                        </div>
+                             <div class="flex items-center space-x-3">
+                                <div class="flex items-center justify-center">
+                                    <img src="/src/assets/LABTrackv2.png" alt="" srcset="" class="h-8 w-8 sm:h-10 sm:w-10">
+                                </div>
+                                    <p class="font-[Orbitron] text-sm font-bold">LAB<span class="text-[#12e19f] ">TRACK</span></p>
+                                </div>
+                             </div>
 
                         <div class="hidden sm:ms-6 sm:flex sm:items-center">
                             <!-- Settings Dropdown -->
@@ -164,20 +300,14 @@
                         </div>
 
                         <div class="mt-3 space-y-1">
-                            <router-link
+                            <!-- <router-link
                                 to="/profile"
                                 @click="showingNavigationDropdown = false"
                                 class="block py-2 pe-4 ps-3 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 focus:bg-gray-50 focus:text-gray-700 transition duration-150 ease-in-out"
                             >
                                 Profile
-                            </router-link>
-                            <router-link
-                                to="/settings"
-                                @click="showingNavigationDropdown = false"
-                                class="block py-2 pe-4 ps-3 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 focus:bg-gray-50 focus:text-gray-700 transition duration-150 ease-in-out"
-                            >
-                                Settings
-                            </router-link>
+                            </router-link> -->
+                           
                             <button
                                 @click="logout_func"
                                 class="block w-full text-left py-2 pe-4 ps-3 text-base font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 focus:bg-gray-50 focus:text-gray-700 transition duration-150 ease-in-out"
@@ -213,128 +343,3 @@
         </div>
     </div>
 </template>
-
-<script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { useRouter } from 'vue-router';
-import { UserIcon, HomeIcon, ChartAreaIcon} from 'lucide-vue-next';
-import { 
-        HomeModernIcon,
-        FolderMinusIcon,
-        ComputerDesktopIcon,
-        AdjustmentsHorizontalIcon,
-        UsersIcon,
-        EnvelopeIcon,
-        AcademicCapIcon
-        } from '@heroicons/vue/24/outline';
-import { AkDashboard,LaUserTieSolid } from '@kalimahapps/vue-icons';
-import { useAuthStore } from '../../composable/useAuth';
-import SideBar from '../../components/sidebar/SideBar.vue';
-
-const auth = useAuthStore();
-const router = useRouter();
-const showingNavigationDropdown = ref(false);
-const showingSettingsDropdown = ref(false);
-
-// Make sidebarState reactive and persistent
-const sidebarState = ref(localStorage.getItem('sidebarState') || 'full');
-
-// Watch for sidebar state changes and update localStorage
-watch(sidebarState, (newState) => {
-  localStorage.setItem('sidebarState', newState);
-}, { immediate: true });
-
-const handleSidebarChange = (state) => {
-  sidebarState.value = state;
-};
-
-// Computed property for main content classes - this ensures reactivity
-const mainContentClasses = computed(() => {
-  const classes = [];
-  
-  switch (sidebarState.value) {
-    case 'full':
-      classes.push('lg:ml-60'); // Adjusted to match sidebar width
-      break;
-    case 'icon':
-      classes.push('lg:ml-16');
-      break;
-    case 'closed':
-    default:
-      classes.push('ml-0');
-      break;
-  }
-  
-  return classes.join(' ');
-});
-
-const SideItems = ref([
-  { id: 'dashboard',        label: 'Dashboard',         icon: AkDashboard, to: '/dashboard'},
-  { id: 'users',            label: 'Users',  icon: UsersIcon, to: '/users' , children: [
-    {
-        id: 'students',     label: 'Students', icon: AcademicCapIcon, to: '/students'
-    },
-    {
-        id: 'admin',        label: 'Admin', icon: LaUserTieSolid, to: '/admin'
-    }
-  ]},
-  { id: 'computers',        label: 'Computers',         icon: ComputerDesktopIcon, to: '/computers' },
-  { id: 'laboratory',       label: 'Laboratory',        icon: HomeModernIcon, to: '/laboratory' },
-  { id: 'computer_logs',    label: 'Logs',     icon: FolderMinusIcon, to: '/computer_logs'},
-  { id: 'request_access',   label: 'Request Access',    icon: EnvelopeIcon, to: '/request-access'}
-]);
-
-const logout_func = async () => {
-  try {
-    await auth.logout();
-    // Clear sidebar state on logout
-    localStorage.removeItem('sidebarState');
-    router.push('/login');
-  } catch (error) {
-    console.error('Logout error:', error);
-    // Still redirect even if logout fails
-    router.push('/login');
-  }
-};
-
-const closeDropdowns = () => {
-  showingSettingsDropdown.value = false;
-  showingNavigationDropdown.value = false;
-};
-
-const toggleSettingsDropdown = () => {
-  showingSettingsDropdown.value = !showingSettingsDropdown.value;
-};
-
-const handleClickOutside = (event) => {
-  if (!(event.target.closest('.dropdown-container'))) {
-    closeDropdowns();
-  }
-};
-
-// Handle window resize to adjust sidebar on mobile
-const handleResize = () => {
-  if (window.innerWidth < 1024 && sidebarState.value !== 'closed') {
-    sidebarState.value = 'closed';
-  }
-};
-
-onMounted( async () => {
-  document.addEventListener('click', handleClickOutside);
-  window.addEventListener('resize', handleResize);
-  
-  if(!auth.user){
-    await auth.loadUser()
-  }
-  
-  // Set initial sidebar state based on screen size
-  if (window.innerWidth < 1024) {
-    sidebarState.value = 'closed';
-  }
-});
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-  window.removeEventListener('resize', handleResize);
-});
-</script>

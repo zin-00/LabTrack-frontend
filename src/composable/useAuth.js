@@ -203,6 +203,7 @@ const requestData = reactive({
       await axios.delete(`${api}/auth/logout`, getAuthHeader())
       clearUser()
       clearToken()
+      router.push({ name: 'login' })
     } catch (error) {
       console.error('Logout failed:', error)
     }

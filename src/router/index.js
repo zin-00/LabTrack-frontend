@@ -15,6 +15,7 @@ import Students from '../pages/users/Students.vue'
 import Profile from '../pages/auth/profile/Profile.vue'
 import RequestAccess from '../pages/request/RequestAccess.vue'
 import RequestForm from '../pages/auth/RequestForm.vue'
+import Scan from '../pages/Scan.vue'
 
 
 
@@ -34,7 +35,8 @@ const routes = [
   { patg: '/profile',           name: 'profile',            component: Profile,       meta: { requiresAuth: true }},
   { path: '/computer_logs',     name: 'computer_logs',      component: ComputerLogs,  meta: { requiresAuth: true }},
   { path: '/reports',           name: 'reports',            component: Reports,       meta: { requiresAuth: true }},
-  { path: '/request-access',    name: 'request',            component: RequestAccess, meta: { requiresAuth: true }}
+  { path: '/request-access',    name: 'request',            component: RequestAccess, meta: { requiresAuth: true }},
+  { path: '/scan',              name: 'scan',               component: Scan,}
 
 ]
 

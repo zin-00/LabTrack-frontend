@@ -189,13 +189,13 @@ onMounted(() => {
                             <!-- <td class="px-3 text-gray-900 font-medium text-xs">
                                 {{ request.id }}
                             </td> -->
-                            <td class="px-3 py-2 text-gray-900 font-medium text-xs">
+                            <td class="px-3 py-1 text-gray-900 font-medium text-xs">
                                 {{ request.id_number }}
                             </td>
-                            <td class="px-3 py-2 text-gray-900 text-sm">
+                            <td class="px-3 py-1 text-gray-900 text-xs">
                                 {{ request.fullname }}
                             </td>
-                            <td class="px-3 py-2 text-sm">
+                            <td class="px-3 py-1 text-xs">
                                 <a
                                     v-if="request.email"
                                     :href="`mailto:${request.email}`"
@@ -205,7 +205,7 @@ onMounted(() => {
                                 </a>
                                 <span v-else class="text-gray-400">—</span>
                             </td>
-                            <td class="px-3 py-2 text-sm">
+                            <td class="px-3 py-1 text-xs">
                                 <span 
                                     v-if="request.role"
                                     class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -214,7 +214,7 @@ onMounted(() => {
                                 </span>
                                 <span v-else class="text-gray-400">—</span>
                             </td>
-                            <td class="px-3 py-2 text-sm">
+                            <td class="px-3 py-1 text-xs">
                                 <span 
                                     :class="getStatusClass(request.status)"
                                     class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
@@ -222,13 +222,13 @@ onMounted(() => {
                                     {{ request.status || 'N/A' }}
                                 </span>
                             </td>
-                            <td class="px-3 py-3 text-sm text-gray-700">
+                            <td class="px-3 py-1 text-xs text-gray-700">
                                 <div class="text-xs">
                                     <div class="font-medium">{{ formatDate(request.created_at) }}</div>
                                     <div class="text-gray-500">{{ formatTime(request.created_at) }}</div>
                                 </div>
                             </td>
-                            <td class="px-3 py-2 text-center">
+                            <td class="px-3 py-1 text-xs text-center">
                                 <div class="flex items-center justify-center">
                                    <button 
                                     v-if="request.status === 'pending'"

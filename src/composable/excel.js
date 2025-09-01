@@ -123,17 +123,25 @@ const { api, getAuthHeader } = useApiUrl();
 
      const parseExcelData = (excelData) => {
       return excelData.map(row => ({
-        student_id: String(row['Student_ID'] || row['student_id'] || '').trim(),
-        rfid_uid: String(row['RFID_UID'] || row['rfid_uid'] || '').trim(),
-        first_name: String(row['First_Name'] || row['first_name'] || '').trim(),
-        middle_name: String(row['Middle_Name'] || row['middle_name'] || '').trim(),
-        last_name: String(row['Last_Name'] || row['last_name'] || '').trim(),
-        email: String(row['Email'] || row['email'] || '').trim().toLowerCase(),
+        student_id: String(row['Student_ID'] || row['student_id'] || row['Student ID'] || row['student id'] || '').trim(),
+        rfid_uid: String(row['RFID_UID'] || row['rfid_uid'] || row['RFID UID'] || row['rfid uid'] || '').trim(),
+        first_name: String(row['First_Name'] || row['first_name'] || row['First Name'] || row['first name'] || '').trim(),
+        middle_name: String(row['Middle_Name'] || row['middle_name'] || row['Middle Name'] || row['middle name'] || '').trim(),
+        last_name: String(row['Last_Name'] || row['last_name'] || row['Last Name'] || row['last name'] || '').trim(),
+        email: String(
+          row['Email'] || row['email'] || row['Email Address'] || row['email address'] || ''
+        )
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ''),
+        year_level_id: String(row['Year_Level'] || row['year_level'] || row['Year Level'] || row['year level'] || '').trim(),
+
       })).filter(student => 
         student.student_id && 
         student.first_name && 
         student.last_name && 
-        student.email
+        student.email &&
+        student.year_level_id
       );
     };
 

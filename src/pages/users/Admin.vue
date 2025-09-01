@@ -1,13 +1,11 @@
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue';
+import { ref, computed, reactive, onMounted, toRef } from 'vue';
 import { useRouter } from 'vue-router';
 import AuthenticatedLayout from '../../layouts/auth/AuthenticatedLayout.vue';
 import Button from '../../components/button/Button.vue';
 import { 
     TrashIcon, 
     PencilIcon, 
-    DocumentMagnifyingGlassIcon, 
-    FunnelIcon, 
     XMarkIcon,
     ArrowDownTrayIcon, 
     UserPlusIcon, 
@@ -37,6 +35,7 @@ const { admins,
         isEditMode,
         pagination,
         showDropdown, } = storeToRefs(admin);
+
 const { fetchAdmins, deleteAdmin, updateAdmin, storeAdmin } = admin;
 
 const router = useRouter();
@@ -51,7 +50,7 @@ const adminData = reactive({
     name: '',
     email: '',
     password: '',
-    confirmPassword: '',
+    password_confirmation: '',
     roles: [],
     status: 'active',
 });
@@ -103,7 +102,7 @@ const clearForm = () => {
     adminData.name = '';
     adminData.email = '';
     adminData.password = '';
-    adminData.confirmPassword = '';
+    adminData.password_confirmation = '';
     adminData.roles = [];
     adminData.status = 'active';
 
@@ -133,7 +132,7 @@ const openAddModal = () => {
         name: '',
         email: '',
         password: '',
-        confirmPassword: '',
+        password_confirmation: '',
         roles: [],
         status: 'active',
     });
@@ -204,7 +203,7 @@ onMounted(() => {
                         v-model="statusFilter"
                         class="border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
                         >
-                        <option value="">All Status</option>
+                        <option value="all">All Status</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                         <option value="restricted">Restricted</option>
@@ -246,7 +245,6 @@ onMounted(() => {
     :users="filteredAdmins"
     @page-change="fetchAdmins"
     @edit="editAdmin"
-    @delete="open_delete_modal"  
     @view="handleView"
   >
     <!-- Clean Custom Header -->
@@ -334,7 +332,7 @@ onMounted(() => {
               <PencilIcon class="w-3.5 h-3.5" />
             </button>
             <button 
-              @click="handleDelete(admin)" 
+              @click="open_delete_modal(admin)" 
               class="p-1.5 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
               title="Delete"
             >
@@ -472,7 +470,7 @@ onMounted(() => {
         <Modal :show="modalState" @close="modalState = false">
             <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-4xl mx-auto relative">
                 <h2 class="text-xl font-bold mb-4">
-                {{ selectedUser ? 'Edit Admin' : 'Add New Admin' }}
+                {{ selectedAdmin ? 'Edit Admin' : 'Add New Admin' }}
                 </h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

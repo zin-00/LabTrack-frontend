@@ -1,23 +1,37 @@
- import { ref } from 'vue';
+ import { reactive, ref } from 'vue';
 import { defineStore } from 'pinia';
 import { useApiUrl } from '../api/api';
 import { useToast } from 'vue-toastification';
 import axios from 'axios';
+import {useStates} from '../composable/states';
 
 const toast = useToast();
 const { api, getAuthHeader } = useApiUrl();
  
  export const useComputerStore = defineStore('computer', () => {
+ const states = useStates();
+
+  const {
+        success,
+        error,
+        } = states;
   const computers = ref([]);
   const labs = ref([]);
   const isLoading = ref(false);
   const modal = ref(false);
-  const tagValue = ref('');
+  const recentScans = ref([]);
+  const isSubmitting = ref(false);
+  const errorMessage = ref("");
+  const latestScan = ref([]);
+
+  const data = reactive({
+    rfid_uid: '',
+  });
 
   const fetchComputers = async () => {
     try {
       isLoading.value = true;
-      const response = await axios.get(`${api}/computers`, getAuthHeader());
+      const response = await axios.get(`${api}/computers?include=laboratory`, getAuthHeader());
       computers.value = response.data.computers || [];
     } catch (error) {
       computers.value = [];
@@ -115,11 +129,64 @@ const { api, getAuthHeader } = useApiUrl();
     }
   }
 
+const unlockAssignedComputer = async (rfid_uid) => {
+  try {
+    isSubmitting.value = true;
+    errorMessage.value = "";
+    
+    const response = await axios.post(
+      `${api}/computer-unlock`, 
+      { rfid_uid },
+      getAuthHeader()
+    );
+    
+    console.log('Full response:', response);
+    console.log('Message:', response.data.message);
+    console.log('Computers:', response.data.computers);
+    console.log('Student:', response.data.student);
+    
+    success(response.data.message);
+    
+    // Add to recent scans with proper data
+    if (response.data.computers && response.data.computers.length > 0) {
+      response.data.computers.forEach(computer => {
+        recentScans.value.unshift({
+          id: computer.log_id || Date.now(),
+          name: response.data.student?.name || "Unknown Student", 
+          computerNumber: `PC-${computer.computer_number}`,
+          ipAddress: computer.ip_address,
+          timestamp: new Date().toLocaleString()
+        });
+      });
+    }
+    
+  } catch (err) {
+    console.error('Error details:', err);
+    console.error('Response data:', err.response?.data);
+    
+    errorMessage.value = err.response?.data?.message || "An error occurred";
+    error(err.response?.data?.message || "An error occurred");
+  } finally {
+    isSubmitting.value = false;
+  }
+}
+
+
   return {
+    // State
     computers,
     labs,
     isLoading,
     modal,
+    data,
+    recentScans,
+    isSubmitting,
+    errorMessage,
+    latestScan,
+
+
+
+    // Functions
     fetchComputers,
     fetchNoLabComputers,
     fetchLabs,
@@ -127,6 +194,7 @@ const { api, getAuthHeader } = useApiUrl();
     updateComputer,
     deleteComputer,
     unlockComputer,
+    unlockAssignedComputer,
     assignLabToComputer,
   };
 });

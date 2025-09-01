@@ -15,11 +15,12 @@ import { useApiUrl } from './api/api'
 
 window.Pusher = Pusher;
 
-window.echo = new Echo({
+window.Echo = new Echo({
     broadcaster: 'reverb',
     key: 'zfw9iorec1mrb9z6pzeg', 
-    wsHost: '127.0.0.1', 
-    // wsHost: '192.168.1.9',
+    // wsHost: '127.0.0.1', 
+    // wsHost: window.location.hostname,
+    wsHost: '192.168.1.4',
     wsPort: 8080, 
     wssPort: 8080,
     forceTLS: false, 
@@ -32,6 +33,7 @@ window.echo = new Echo({
 
 const app = createApp(App)
 const pinia = createPinia()
+app.use(pinia)
 
 app.use(Toast, {
   position: 'top-right',
@@ -39,7 +41,6 @@ app.use(Toast, {
   closeOnClick: true,
   pauseOnHover: true,
 })
-app.use(pinia)
 app.use(router)
 app.use(VueApexCharts)
 

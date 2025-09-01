@@ -70,8 +70,12 @@ const getSortIcon = (field) => {
 const headerLabels = {
   id: 'ID',
   student_id: 'Student ID',
-  first_name: 'Name',
+  first_name: 'First Name',
+  middle_name: 'Middle Name',
+  last_name: 'Last Name',
   email: 'Email',
+  year_level_id: 'Year Level',
+  section_id: 'Section',
   program: 'Program',
   status: 'Status'
 }
@@ -139,7 +143,7 @@ const getVisiblePages = () => {
         <thead v-if="!slots.header" class="bg-gray-50">
           <tr>
             <th
-              v-for="field in ['id', 'student_id', 'first_name','email','program', 'status']"
+              v-for="field in ['student_id', 'first_name','middle_name', 'last_name','email', 'year_level_id', 'section_id','program', 'status']"
               :key="field"
               class="px-3 py-2 text-xs font-medium text-gray-600 text-left cursor-pointer hover:bg-gray-100 transition-colors"
               @click="sort(field)"
@@ -183,11 +187,13 @@ const getVisiblePages = () => {
               :key="user.id"
               class="hover:bg-gray-50 transition-colors"
             >
-              <td class="px-3 py-2 text-gray-900 font-medium">{{ user.id }}</td>
-              <td class="px-3 py-2 text-gray-900 font-medium">{{ user.student_id }}</td>
+              <!-- <td class="px-3 py-2 text-gray-900 font-medium">{{ user.id }}</td> -->
+              <td class="px-3 py-1 text-gray-900 font-medium">{{ user.student_id }}</td>
 
-              <td class="px-3 py-2 text-gray-900">{{ formatName(user) }}</td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-1 text-gray-900 text-xs">{{user.first_name}}</td>
+              <td class="px-3 py-1 text-gray-900 text-xs">{{user.middle_name}}</td>
+              <td class="px-3 py-1 text-gray-900 text-xs">{{user.last_name}}</td>
+              <td class="px-3 py-1">
                 <a
                   v-if="user.email"
                   :href="`mailto:${user.email}`"
@@ -197,12 +203,14 @@ const getVisiblePages = () => {
                 </a>
                 <span v-else class="text-gray-400">—</span>
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-1">{{ user.year_level_id }}</td>
+              <td class="px-3 py-1">{{ user.section_id }}</td>
+              <td class="px-3 py-1">
                 <span class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
                   {{ formatProgram(user.program?.program_code) }}
                 </span>
               </td>
-              <td class="px-3 py-2">
+              <td class="px-3 py-1">
                 <span
                   v-if="user.status"
                   :class="user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"

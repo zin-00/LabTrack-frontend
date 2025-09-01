@@ -2,24 +2,34 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import axios from 'axios';
 import { useApiUrl } from '../api/api';
-import { useToast } from 'vue-toastification';
+import {useStates} from './states';
 
-
-const toast = useToast();
 const { api, getAuthHeader } = useApiUrl();
+
 
 // Students functions
 export const useStudentStore = defineStore('student', () => {
+  // const {
+  //       isLoading,
+  //       students
+  //       } = useStates();
+        
+  const {
+        success,
+        error
+        } = useStates();
+
   const students = ref([]);
   const isLoading = ref(false);
+
 
   const storeStudent = async (data) => {
     try{
       const response = await axios.post(`${api}/students`, data, getAuthHeader());
-      toast.success(response.data.message || 'Student added successfully!');
-    }catch(error){
-      toast.error('Failed to add student.');
-      console.error('Error storing student:', error);
+      success(response.data.message || 'Student added successfully!');
+    }catch(err){
+      error('Failed to add student.');
+      console.error('Error storing student:', err);
     }
   }
   const fetchStudents = async (page = 1) => {
@@ -29,10 +39,10 @@ export const useStudentStore = defineStore('student', () => {
       students.value = response.data.students || [];
       console.log(students.value);
       
-    }catch(error){
+    }catch(err){
       students.value = [];
-      toast.error('Failed to fetch students');
-      console.error('Error fetching students:', error);
+      error('Failed to fetch students');
+      console.error('Error fetching students:', err);
     }finally{
       isLoading.value = false;
     }
@@ -41,22 +51,22 @@ export const useStudentStore = defineStore('student', () => {
   const updateStudent = async (id, data) => {
     try{
       await axios.put(`${api}/students/${id}`, data, getAuthHeader());
-      toast.success('Student updated successfully!');
+      success('Student updated successfully!');
       await fetchStudents();
-    }catch(error){
-      toast.error('Failed to update student.');
-      console.error('Error updating student:', error);
+    }catch(err){
+      error('Failed to update student.');
+      console.error('Error updating student:', err);
     }
   }
 
   const deleteStudent = async (id) => {
     try{
       await axios.delete(`${api}/students/${id}`, getAuthHeader());
-      toast.success('Student deleted successfully!');
+      success('Student deleted successfully!');
       await fetchStudents();
-    }catch(error){
-      toast.error('Failed to delete student.');
-      console.error('Error deleting student:', error);
+    }catch(err){
+      error('Failed to delete student.');
+      console.error('Error deleting student:', err);
     }
   }
 
